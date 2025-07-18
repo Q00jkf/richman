@@ -3,7 +3,7 @@
  */
 
 const { v4: uuidv4 } = require('uuid');
-const { RoomStatus, GameSettings, ErrorCode } = require('../../../shared/constants/GameConstants');
+const { RoomStatus, GameSettings, ErrorCode } = require('../../shared/constants/GameConstants');
 
 class RoomManager {
   constructor() {

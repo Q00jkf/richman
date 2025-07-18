@@ -3,7 +3,7 @@
  * 處理請求數據驗證和清理
  */
 
-const { ErrorCode } = require('../../../shared/constants/GameConstants');
+const { ErrorCode } = require('../../shared/constants/GameConstants');
 
 /**
  * 驗證玩家創建數據

@@ -4,7 +4,7 @@
  */
 
 const rateLimit = require('express-rate-limit');
-const { ErrorCode } = require('../../../shared/constants/GameConstants');
+const { ErrorCode } = require('../../shared/constants/GameConstants');
 
 /**
  * 一般 API 頻率限制

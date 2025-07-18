@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { ErrorCode } = require('../../../shared/constants/GameConstants');
+const { ErrorCode } = require('../../shared/constants/GameConstants');
 
 // 這些服務將由主應用程序注入
 let gameManager, playerManager, roomManager;

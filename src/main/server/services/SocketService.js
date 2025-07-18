@@ -2,7 +2,7 @@
  * Socket 服務 - 處理 WebSocket 連接、事件路由、實時通信
  */
 
-const { SocketEvents, ErrorCode, MessageType } = require('../../../shared/constants/GameConstants');
+const { SocketEvents, ErrorCode, MessageType } = require('../../shared/constants/GameConstants');
 
 class SocketService {
   constructor(io, services) {

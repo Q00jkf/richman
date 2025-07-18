@@ -4,7 +4,7 @@
  */
 
 const jwt = require('jsonwebtoken');
-const { ErrorCode } = require('../../../shared/constants/GameConstants');
+const { ErrorCode } = require('../../shared/constants/GameConstants');
 
 /**
  * 驗證 JWT 令牌

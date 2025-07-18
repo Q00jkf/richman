@@ -5,7 +5,7 @@
 
 const { v4: uuidv4 } = require('uuid');
 const GameEngine = require('./GameEngine');
-const { GamePhase, GameEventType } = require('../../../shared/constants/GameConstants');
+const { GamePhase, GameEventType } = require('../../shared/constants/GameConstants');
 
 class GameManager {
   constructor() {

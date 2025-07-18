@@ -4,9 +4,9 @@
  */
 
 const { v4: uuidv4 } = require('uuid');
-const { GamePhase, GameActionType, GameEventType } = require('../../../shared/constants/GameConstants');
-const { STANDARD_BOARD_SPACES, STANDARD_PROPERTY_GROUPS } = require('../../../shared/constants/BoardConstants');
-const { CHANCE_CARDS, COMMUNITY_CHEST_CARDS } = require('../../../shared/constants/CardConstants');
+const { GamePhase, GameActionType, GameEventType } = require('../../shared/constants/GameConstants');
+const { STANDARD_BOARD_SPACES, STANDARD_PROPERTY_GROUPS } = require('../../shared/constants/BoardConstants');
+const { CHANCE_CARDS, COMMUNITY_CHEST_CARDS } = require('../../shared/constants/CardConstants');
 
 class GameEngine {
   constructor(gameId, roomId, settings = {}) {
@@ -426,6 +426,526 @@ class GameEngine {
     // 如果是自己的地產，無事發生
     this.gameState.gamePhase = GamePhase.PLAYER_TURN;
     this.updateGameState();
+  }
+
+  async handleBuyProperty(playerId, data) {
+    const player = this.getPlayer(playerId);
+    const { propertyId } = data;
+    const property = this.gameState.board.spaces.find(s => s.id === propertyId);
+    
+    if (!property || (property.type !== 'property' && property.type !== 'railroad' && property.type !== 'utility')) {
+      return { success: false, message: 'Invalid property' };
+    }
+    
+    if (this.getPropertyOwnership(propertyId)) {
+      return { success: false, message: 'Property already owned' };
+    }
+    
+    if (player.money < property.price) {
+      return { success: false, message: 'Insufficient funds' };
+    }
+    
+    // 扣除金錢
+    player.money -= property.price;
+    
+    // 添加到玩家地產
+    player.properties.push({
+      id: propertyId,
+      name: property.name,
+      type: property.type,
+      group: property.group || null,
+      houses: 0,
+      hotels: 0,
+      mortgaged: false,
+      purchasePrice: property.price,
+      purchaseDate: new Date()
+    });
+    
+    player.stats.propertiesBought++;
+    this.updateGameState();
+    
+    this.emit(GameEventType.PROPERTY_BOUGHT, {
+      gameId: this.gameId,
+      playerId,
+      propertyId,
+      price: property.price
+    });
+    
+    return { success: true, property: player.properties[player.properties.length - 1] };
+  }
+
+  async handleBuildHouse(playerId, data) {
+    const player = this.getPlayer(playerId);
+    const { propertyId } = data;
+    const playerProperty = player.properties.find(p => p.id === propertyId);
+    
+    if (!playerProperty) {
+      return { success: false, message: 'Property not owned' };
+    }
+    
+    const boardProperty = this.gameState.board.spaces.find(s => s.id === propertyId);
+    if (boardProperty.type !== 'property') {
+      return { success: false, message: 'Cannot build on this property' };
+    }
+    
+    // 檢查是否擁有整組地產
+    const group = this.gameState.board.propertyGroups[boardProperty.group];
+    const ownedInGroup = player.properties.filter(p => {
+      const prop = this.gameState.board.spaces.find(s => s.id === p.id);
+      return prop && prop.group === boardProperty.group;
+    });
+    
+    if (ownedInGroup.length !== group.properties.length) {
+      return { success: false, message: 'Must own entire group' };
+    }
+    
+    if (playerProperty.houses >= 4) {
+      return { success: false, message: 'Maximum houses reached' };
+    }
+    
+    if (player.money < boardProperty.houseCost) {
+      return { success: false, message: 'Insufficient funds' };
+    }
+    
+    // 建造房屋
+    player.money -= boardProperty.houseCost;
+    playerProperty.houses++;
+    player.stats.housesBuilt++;
+    
+    this.updateGameState();
+    
+    this.emit(GameEventType.HOUSE_BUILT, {
+      gameId: this.gameId,
+      playerId,
+      propertyId,
+      cost: boardProperty.houseCost
+    });
+    
+    return { success: true, houses: playerProperty.houses };
+  }
+
+  async handleBuildHotel(playerId, data) {
+    const player = this.getPlayer(playerId);
+    const { propertyId } = data;
+    const playerProperty = player.properties.find(p => p.id === propertyId);
+    
+    if (!playerProperty) {
+      return { success: false, message: 'Property not owned' };
+    }
+    
+    if (playerProperty.houses !== 4) {
+      return { success: false, message: 'Need 4 houses to build hotel' };
+    }
+    
+    if (playerProperty.hotels >= 1) {
+      return { success: false, message: 'Hotel already built' };
+    }
+    
+    const boardProperty = this.gameState.board.spaces.find(s => s.id === propertyId);
+    if (player.money < boardProperty.hotelCost) {
+      return { success: false, message: 'Insufficient funds' };
+    }
+    
+    // 建造旅館
+    player.money -= boardProperty.hotelCost;
+    playerProperty.houses = 0; // 移除房屋
+    playerProperty.hotels = 1;
+    player.stats.hotelsBuilt++;
+    
+    this.updateGameState();
+    
+    this.emit(GameEventType.HOTEL_BUILT, {
+      gameId: this.gameId,
+      playerId,
+      propertyId,
+      cost: boardProperty.hotelCost
+    });
+    
+    return { success: true, hotels: playerProperty.hotels };
+  }
+
+  async handlePayJailFine(playerId) {
+    const player = this.getPlayer(playerId);
+    
+    if (!player.jailStatus.isInJail) {
+      return { success: false, message: 'Player not in jail' };
+    }
+    
+    if (player.money < this.settings.jailFine) {
+      return { success: false, message: 'Insufficient funds' };
+    }
+    
+    // 支付罰金出獄
+    player.money -= this.settings.jailFine;
+    player.jailStatus.isInJail = false;
+    player.jailStatus.turnsInJail = 0;
+    player.jailStatus.jailReason = 'none';
+    
+    this.updateGameState();
+    
+    this.emit(GameEventType.JAIL_EXITED, {
+      gameId: this.gameId,
+      playerId,
+      method: 'fine',
+      amount: this.settings.jailFine
+    });
+    
+    return { success: true };
+  }
+
+  async handleUseGetOutOfJailCard(playerId) {
+    const player = this.getPlayer(playerId);
+    
+    if (!player.jailStatus.isInJail) {
+      return { success: false, message: 'Player not in jail' };
+    }
+    
+    if (!player.jailStatus.hasGetOutOfJailCard) {
+      return { success: false, message: 'No get out of jail card' };
+    }
+    
+    // 使用出獄卡
+    player.jailStatus.isInJail = false;
+    player.jailStatus.turnsInJail = 0;
+    player.jailStatus.hasGetOutOfJailCard = false;
+    player.jailStatus.jailReason = 'none';
+    
+    this.updateGameState();
+    
+    this.emit(GameEventType.JAIL_EXITED, {
+      gameId: this.gameId,
+      playerId,
+      method: 'card'
+    });
+    
+    return { success: true };
+  }
+
+  async handleEndTurn(playerId) {
+    if (this.getCurrentPlayer().id !== playerId) {
+      return { success: false, message: 'Not your turn' };
+    }
+    
+    this.endPlayerTurn();
+    return { success: true };
+  }
+
+  async handleRailroadLanding(playerId, space) {
+    const property = this.getPropertyOwnership(space.id);
+    
+    if (!property) {
+      this.gameState.gamePhase = GamePhase.PROPERTY_ACTION;
+      this.updateGameState();
+    } else if (property.ownerId !== playerId) {
+      const rentAmount = this.calculateRailroadRent(property.ownerId);
+      await this.payRent(playerId, property.ownerId, rentAmount);
+    }
+    
+    this.gameState.gamePhase = GamePhase.PLAYER_TURN;
+    this.updateGameState();
+  }
+
+  async handleUtilityLanding(playerId, space) {
+    const property = this.getPropertyOwnership(space.id);
+    
+    if (!property) {
+      this.gameState.gamePhase = GamePhase.PROPERTY_ACTION;
+      this.updateGameState();
+    } else if (property.ownerId !== playerId) {
+      const rentAmount = this.calculateUtilityRent(property.ownerId, this.gameState.diceResult.total);
+      await this.payRent(playerId, property.ownerId, rentAmount);
+    }
+    
+    this.gameState.gamePhase = GamePhase.PLAYER_TURN;
+    this.updateGameState();
+  }
+
+  async handleChanceLanding(playerId) {
+    const card = this.drawChanceCard();
+    await this.executeCardEffect(playerId, card);
+    
+    this.gameState.gamePhase = GamePhase.PLAYER_TURN;
+    this.updateGameState();
+  }
+
+  async handleCommunityChestLanding(playerId) {
+    const card = this.drawCommunityChestCard();
+    await this.executeCardEffect(playerId, card);
+    
+    this.gameState.gamePhase = GamePhase.PLAYER_TURN;
+    this.updateGameState();
+  }
+
+  async handleTaxLanding(playerId, space) {
+    const player = this.getPlayer(playerId);
+    const taxAmount = space.amount;
+    
+    if (player.money < taxAmount) {
+      await this.handlePlayerBankruptcy(playerId);
+      return;
+    }
+    
+    player.money -= taxAmount;
+    this.updateGameState();
+    
+    this.emit(GameEventType.TAX_PAID, {
+      gameId: this.gameId,
+      playerId,
+      amount: taxAmount
+    });
+    
+    this.gameState.gamePhase = GamePhase.PLAYER_TURN;
+    this.updateGameState();
+  }
+
+  async handleGoToJail(playerId) {
+    const player = this.getPlayer(playerId);
+    
+    player.position = 10; // 監獄位置
+    player.jailStatus.isInJail = true;
+    player.jailStatus.turnsInJail = 0;
+    player.jailStatus.jailReason = 'go_to_jail';
+    player.stats.timesInJail++;
+    
+    this.updateGameState();
+    
+    this.emit(GameEventType.JAIL_ENTERED, {
+      gameId: this.gameId,
+      playerId,
+      reason: 'go_to_jail'
+    });
+    
+    this.gameState.gamePhase = GamePhase.PLAYER_TURN;
+    this.updateGameState();
+  }
+
+  async handleFreeParkingLanding(playerId) {
+    if (this.settings.freeParkingBonus > 0) {
+      const player = this.getPlayer(playerId);
+      player.money += this.settings.freeParkingBonus;
+      
+      this.emit(GameEventType.FREE_PARKING_BONUS, {
+        gameId: this.gameId,
+        playerId,
+        amount: this.settings.freeParkingBonus
+      });
+    }
+    
+    this.gameState.gamePhase = GamePhase.PLAYER_TURN;
+    this.updateGameState();
+  }
+
+  getPropertyOwnership(propertyId) {
+    for (const player of this.gameState.players) {
+      const property = player.properties.find(p => p.id === propertyId);
+      if (property) {
+        return {
+          ownerId: player.id,
+          ownerName: player.name,
+          property
+        };
+      }
+    }
+    return null;
+  }
+
+  calculateRent(propertyId, ownerId) {
+    const owner = this.getPlayer(ownerId);
+    const playerProperty = owner.properties.find(p => p.id === propertyId);
+    const boardProperty = this.gameState.board.spaces.find(s => s.id === propertyId);
+    
+    if (!playerProperty || !boardProperty) return 0;
+    
+    if (playerProperty.mortgaged) return 0;
+    
+    let rentIndex = 0;
+    if (playerProperty.hotels > 0) {
+      rentIndex = 5; // 旅館租金
+    } else if (playerProperty.houses > 0) {
+      rentIndex = playerProperty.houses; // 房屋租金
+    } else {
+      // 檢查是否擁有整組
+      const group = this.gameState.board.propertyGroups[boardProperty.group];
+      const ownedInGroup = owner.properties.filter(p => {
+        const prop = this.gameState.board.spaces.find(s => s.id === p.id);
+        return prop && prop.group === boardProperty.group && !p.mortgaged;
+      });
+      
+      if (ownedInGroup.length === group.properties.length) {
+        rentIndex = 0; // 基礎租金但會x2
+        return boardProperty.rent[rentIndex] * 2;
+      }
+    }
+    
+    return boardProperty.rent[rentIndex] || 0;
+  }
+
+  calculateRailroadRent(ownerId) {
+    const owner = this.getPlayer(ownerId);
+    const railroads = owner.properties.filter(p => {
+      const boardProp = this.gameState.board.spaces.find(s => s.id === p.id);
+      return boardProp && boardProp.type === 'railroad' && !p.mortgaged;
+    });
+    
+    const count = railroads.length;
+    if (count === 0) return 0;
+    
+    const baseRent = 25;
+    return baseRent * Math.pow(2, count - 1);
+  }
+
+  calculateUtilityRent(ownerId, diceRoll) {
+    const owner = this.getPlayer(ownerId);
+    const utilities = owner.properties.filter(p => {
+      const boardProp = this.gameState.board.spaces.find(s => s.id === p.id);
+      return boardProp && boardProp.type === 'utility' && !p.mortgaged;
+    });
+    
+    const count = utilities.length;
+    if (count === 0) return 0;
+    
+    const multiplier = count === 1 ? 4 : 10;
+    return diceRoll * multiplier;
+  }
+
+  async payRent(payerId, ownerId, amount) {
+    const payer = this.getPlayer(payerId);
+    const owner = this.getPlayer(ownerId);
+    
+    if (payer.money < amount) {
+      await this.handlePlayerBankruptcy(payerId);
+      return;
+    }
+    
+    payer.money -= amount;
+    owner.money += amount;
+    
+    payer.stats.totalRentPaid += amount;
+    owner.stats.totalRentCollected += amount;
+    
+    this.updateGameState();
+    
+    this.emit(GameEventType.RENT_PAID, {
+      gameId: this.gameId,
+      payerId,
+      ownerId,
+      amount
+    });
+  }
+
+  async handlePlayerBankruptcy(playerId) {
+    const player = this.getPlayer(playerId);
+    
+    player.isBankrupt = true;
+    player.isActive = false;
+    player.stats.bankruptcies++;
+    
+    // 將所有地產歸還銀行
+    player.properties = [];
+    player.money = 0;
+    
+    this.updateGameState();
+    
+    this.emit(GameEventType.PLAYER_BANKRUPTED, {
+      gameId: this.gameId,
+      playerId
+    });
+    
+    // 檢查遊戲是否結束
+    if (this.checkWinCondition()) {
+      this.endGame();
+    }
+  }
+
+  drawChanceCard() {
+    if (this.chanceCards.length === 0) {
+      this.chanceCards = [...CHANCE_CARDS];
+      this.shuffleArray(this.chanceCards);
+    }
+    
+    return this.chanceCards.pop();
+  }
+
+  drawCommunityChestCard() {
+    if (this.communityChestCards.length === 0) {
+      this.communityChestCards = [...COMMUNITY_CHEST_CARDS];
+      this.shuffleArray(this.communityChestCards);
+    }
+    
+    return this.communityChestCards.pop();
+  }
+
+  async executeCardEffect(playerId, card) {
+    const player = this.getPlayer(playerId);
+    const effect = card.effect;
+    
+    this.emit(GameEventType.CARD_DRAWN, {
+      gameId: this.gameId,
+      playerId,
+      cardId: card.id,
+      cardTitle: card.title
+    });
+    
+    switch (effect.type) {
+      case 'move_to':
+        await this.movePlayerTo(playerId, effect.position);
+        break;
+      case 'move_relative':
+        await this.movePlayer(playerId, effect.steps);
+        break;
+      case 'gain_money':
+        player.money += effect.amount;
+        player.stats.totalMoneyEarned += effect.amount;
+        break;
+      case 'lose_money':
+        if (player.money < effect.amount) {
+          await this.handlePlayerBankruptcy(playerId);
+        } else {
+          player.money -= effect.amount;
+        }
+        break;
+      case 'go_to_jail':
+        await this.handleGoToJail(playerId);
+        break;
+      case 'get_out_of_jail_card':
+        player.jailStatus.hasGetOutOfJailCard = true;
+        break;
+      case 'collect_from_players':
+        for (const otherPlayer of this.gameState.players) {
+          if (otherPlayer.id !== playerId && !otherPlayer.isBankrupt) {
+            const amount = Math.min(effect.amount, otherPlayer.money);
+            otherPlayer.money -= amount;
+            player.money += amount;
+          }
+        }
+        break;
+    }
+    
+    this.updateGameState();
+  }
+
+  async movePlayerTo(playerId, position) {
+    const player = this.getPlayer(playerId);
+    const oldPosition = player.position;
+    
+    // 檢查是否經過起點
+    if (position < oldPosition) {
+      this.collectSalary(playerId);
+    }
+    
+    player.position = position;
+    this.updateGameState();
+    
+    this.emit(GameEventType.PLAYER_MOVED, {
+      gameId: this.gameId,
+      playerId,
+      oldPosition,
+      newPosition: position,
+      method: 'card'
+    });
+    
+    // 處理落地效果
+    await this.handleLandingEffect(playerId, position);
   }
 
   /**

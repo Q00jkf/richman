@@ -3,7 +3,7 @@
  */
 
 const { v4: uuidv4 } = require('uuid');
-const { PlayerStatus, ErrorCode } = require('../../../shared/constants/GameConstants');
+const { PlayerStatus, ErrorCode } = require('../../shared/constants/GameConstants');
 
 class PlayerManager {
   constructor() {
