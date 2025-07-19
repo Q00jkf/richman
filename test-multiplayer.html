@@ -505,13 +505,25 @@
             });
             
             socket.on('turn_started', (data) => {
+                console.log('🎯 Received turn_started event:', data);
+                
+                // 更新遊戲狀態（如果有提供）
+                if (data.gameState) {
+                    updateGameState(data.gameState);
+                } else {
+                    // 如果沒有遊戲狀態，手動獲取
+                    setTimeout(() => {
+                        getGameState();
+                    }, 500);
+                }
+                
                 if (data.playerId === currentPlayerId) {
-                    addLog('🎯 輪到你了！', 'game');
+                    addLog(`🎯 輪到你了！回合 ${data.roundNumber}`, 'game');
                     isMyTurn = true;
                     rollDiceBtn.disabled = false;
                     endTurnBtn.disabled = false;
                 } else {
-                    addLog(`🎯 輪到其他玩家`, 'info');
+                    addLog(`🎯 輪到其他玩家: ${data.playerName}，回合 ${data.roundNumber}`, 'info');
                     isMyTurn = false;
                     rollDiceBtn.disabled = true;
                     endTurnBtn.disabled = true;
@@ -543,6 +555,16 @@
             // 通知事件
             socket.on('notification', (data) => {
                 addLog(`📢 ${data.message}`, 'info');
+            });
+            
+            // 遊戲動作結果
+            socket.on('game_action_result', (data) => {
+                console.log('🎮 Game action result:', data);
+                if (!data.success) {
+                    addLog(`❌ 動作失敗: ${data.message}`, 'error');
+                } else {
+                    addLog(`✅ 動作成功`, 'success');
+                }
             });
         }
         

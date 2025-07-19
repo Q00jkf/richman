@@ -185,6 +185,7 @@ class SocketService {
     // 遊戲相關事件
     socket.on('start_game', (data) => this.handleStartGame(socket, data));
     socket.on(SocketEvents.PLAYER_ACTION, (data) => this.handleGameAction(socket, data));
+    socket.on('game_action', (data) => this.handleGameAction(socket, data)); // 兼容前端
     socket.on('get_game_state', (data) => this.handleGetGameState(socket, data));
     
     // 聊天相關事件
@@ -516,12 +517,18 @@ class SocketService {
    */
   async handleGameAction(socket, data) {
     try {
+      console.log('🎮 Received game action:', data);
+      
       const player = this.playerManager.getPlayerBySocketId(socket.id);
       if (!player) {
         return this.sendError(socket, ErrorCode.UNAUTHORIZED, 'Player not authenticated');
       }
       
-      const result = await this.gameManager.handlePlayerAction(player.id, data.action);
+      // 處理不同的數據格式 (兼容性)
+      const action = data.action || data;
+      console.log('🎮 Processing action:', action, 'for player:', player.id);
+      
+      const result = await this.gameManager.handlePlayerAction(player.id, action);
       
       if (result.success) {
         const game = this.gameManager.getGameByPlayer(player.id);

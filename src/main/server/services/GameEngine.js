@@ -219,11 +219,15 @@ class GameEngine {
     this.updateGameState();
 
     const currentPlayer = this.getCurrentPlayer();
+    console.log(`🎯 Starting turn for player: ${currentPlayer.name} (${currentPlayer.id})`);
+    
     this.emit(GameEventType.TURN_STARTED, {
       gameId: this.gameId,
+      roomId: this.roomId,
       playerId: currentPlayer.id,
       playerName: currentPlayer.name,
-      roundNumber: this.gameState.roundNumber
+      roundNumber: this.gameState.roundNumber,
+      gameState: this.getGameState()
     });
 
     // 設置回合計時器
@@ -279,8 +283,11 @@ class GameEngine {
     }
 
     try {
+      console.log(`🎮 Processing action for player ${playerId}:`, action);
+      
       switch (action.type) {
         case GameActionType.ROLL_DICE:
+        case 'ROLL_DICE': // 兼容前端格式
           return await this.handleRollDice(playerId);
         case GameActionType.BUY_PROPERTY:
           return await this.handleBuyProperty(playerId, action.data);
@@ -293,8 +300,10 @@ class GameEngine {
         case GameActionType.USE_GET_OUT_OF_JAIL_CARD:
           return await this.handleUseGetOutOfJailCard(playerId);
         case GameActionType.END_TURN:
+        case 'END_TURN': // 兼容前端格式
           return await this.handleEndTurn(playerId);
         default:
+          console.log(`❌ Unknown action type: ${action.type}`);
           return { success: false, message: 'Unknown action type' };
       }
     } catch (error) {
@@ -325,8 +334,11 @@ class GameEngine {
     this.gameState.gamePhase = GamePhase.DICE_ROLLING;
     this.updateGameState();
 
+    console.log(`🎲 Player ${playerId} rolled: ${dice1} + ${dice2} = ${total}`);
+    
     this.emit(GameEventType.DICE_ROLLED, {
       gameId: this.gameId,
+      roomId: this.roomId,
       playerId,
       diceResult
     });
@@ -353,8 +365,11 @@ class GameEngine {
       this.collectSalary(playerId);
     }
 
+    console.log(`🚶 Player ${playerId} moved from ${oldPosition} to ${newPosition}`);
+    
     this.emit(GameEventType.PLAYER_MOVED, {
       gameId: this.gameId,
+      roomId: this.roomId,
       playerId,
       oldPosition,
       newPosition,
@@ -418,9 +433,19 @@ class GameEngine {
         break;
       default:
         // 其他格子，無特殊效果
-        this.gameState.gamePhase = GamePhase.PLAYER_TURN;
-        this.updateGameState();
+        console.log(`📍 Player ${playerId} landed on ${space.name} (no special effect)`);
         break;
+    }
+    
+    // 處理完落地效果後，檢查是否需要自動結束回合
+    if (this.gameState.gamePhase !== GamePhase.PROPERTY_ACTION && 
+        this.gameState.gamePhase !== GamePhase.TRADE &&
+        this.gameState.gamePhase !== GamePhase.CARD_DRAWING) {
+      // 如果不需要玩家進一步操作，自動結束回合
+      console.log(`⏭️ Auto-ending turn for player ${playerId}`);
+      setTimeout(() => {
+        this.endPlayerTurn();
+      }, 2000); // 給玩家 2 秒時間看結果
     }
   }
 
