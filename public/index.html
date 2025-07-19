@@ -3,294 +3,1131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎮 RichMan Online</title>
+    <title>🎩 RichMan 大富翁遊戲 - 雲端版</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            min-height: 100vh;
+            height: 100vh;
+            overflow: hidden;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
+        
+        /* 主要佈局容器 */
+        .game-container {
+            display: grid;
+            grid-template-areas: 
+                "header header header"
+                "sidebar main info"
+                "logs logs logs";
+            grid-template-rows: 80px 1fr 180px;
+            grid-template-columns: 250px 1fr 300px;
+            height: 100vh;
+            gap: 15px;
+            padding: 15px;
+        }
+        
+        /* 頂部狀態欄 */
+        .header {
+            grid-area: header;
             background: rgba(255, 255, 255, 0.1);
-            padding: 30px;
-            border-radius: 15px;
+            border-radius: 12px;
+            padding: 15px 25px;
             backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        .controls {
             display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
-        button {
-            padding: 12px 24px;
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .id-display {
+            background: rgba(255, 193, 7, 0.2);
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+        }
+        
+        .id-label {
+            opacity: 0.8;
+            margin-right: 5px;
+        }
+        
+        .id-value {
+            font-weight: bold;
+            color: #ffc107;
+        }
+        
+        /* 左側邊欄 - 玩家控制台 */
+        .sidebar {
+            grid-area: sidebar;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 0;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .tab-header {
+            display: flex;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            border-radius: 0;
+        }
+        
+        .tab-button:first-child {
+            border-radius: 12px 0 0 0;
+        }
+        
+        .tab-button:last-child {
+            border-radius: 0 12px 0 0;
+        }
+        
+        .tab-button.active {
+            background: rgba(255, 193, 7, 0.3);
+            font-weight: bold;
+            color: #ffc107;
+        }
+        
+        .tab-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .tab-content {
+            padding: 20px;
+            height: calc(100% - 48px);
+            overflow-y: auto;
+        }
+        
+        .tab-panel {
+            display: none;
+        }
+        
+        .tab-panel.active {
+            display: block;
+        }
+        
+        .tab-panel h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #ffc107;
+            border-bottom: 2px solid rgba(255, 193, 7, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        .control-section {
+            margin-bottom: 25px;
+        }
+        
+        .control-section h4 {
+            font-size: 14px;
+            margin-bottom: 12px;
+            opacity: 0.9;
+            border-left: 3px solid #ffc107;
+            padding-left: 10px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+        
+        input {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 13px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #ffc107;
+            box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.2);
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
             background: rgba(255, 255, 255, 0.2);
             color: white;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
+            font-size: 13px;
             cursor: pointer;
-            font-size: 14px;
             transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        button:hover {
+        
+        .btn:hover {
             background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
-        .status {
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 8px;
-            font-weight: bold;
-            text-align: center;
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
         }
-        .status.connecting {
-            background: rgba(255, 193, 7, 0.3);
-            border: 2px solid #ffc107;
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ffc107, #ff8c00);
+            color: #333;
+            font-weight: 500;
         }
-        .status.connected {
-            background: rgba(40, 167, 69, 0.3);
-            border: 2px solid #28a745;
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #ffcd39, #ffa500);
         }
-        .status.error {
-            background: rgba(220, 53, 69, 0.3);
-            border: 2px solid #dc3545;
+        
+        /* 主要遊戲區域 */
+        .main-game {
+            grid-area: main;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            gap: 20px;
         }
-        .log {
-            background: rgba(0, 0, 0, 0.7);
-            color: #00ff00;
+        
+        /* 狀況欄位 */
+        .status-panel {
+            flex: 2;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
             padding: 20px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            height: 300px;
-            overflow-y: auto;
-            margin: 20px 0;
             border: 2px solid rgba(255, 255, 255, 0.2);
         }
-        .info-box {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border-left: 4px solid #00ff00;
+        
+        .status-panel h3 {
+            text-align: center;
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #ffc107;
         }
-        @media (max-width: 600px) {
-            .container {
-                margin: 10px;
-                padding: 20px;
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .status-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .status-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+        
+        .status-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffc107;
+        }
+        
+        .money-display {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(40, 167, 69, 0.3), rgba(34, 139, 58, 0.3));
+            border: 2px solid rgba(40, 167, 69, 0.5);
+        }
+        
+        .money-display .status-value {
+            font-size: 24px;
+            color: #28a745;
+        }
+        
+        .properties-list {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        
+        .property-item {
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            margin-bottom: 5px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        /* 操作按鈕區 */
+        .action-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .game-button {
+            padding: 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            text-transform: none;
+        }
+        
+        .dice-button {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            color: white;
+            font-size: 18px;
+        }
+        
+        .dice-button:hover {
+            background: linear-gradient(135deg, #ff5252, #e53935);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+        }
+        
+        .skill-button {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: white;
+        }
+        
+        .skill-button:hover {
+            background: linear-gradient(135deg, #26c6da, #00acc1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(78, 205, 196, 0.4);
+        }
+        
+        .end-turn-button {
+            background: linear-gradient(135deg, #ffc107, #ff8c00);
+            color: #333;
+        }
+        
+        .end-turn-button:hover {
+            background: linear-gradient(135deg, #ffcd39, #ffa500);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 193, 7, 0.4);
+        }
+        
+        .game-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* 右側信息欄 */
+        .info-panel {
+            grid-area: info;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .info-section {
+            margin-bottom: 25px;
+        }
+        
+        .info-section h4 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #ffc107;
+            border-bottom: 1px solid rgba(255, 193, 7, 0.3);
+            padding-bottom: 8px;
+        }
+        
+        .game-state-display {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .rooms-list {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .room-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .room-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .room-info {
+            opacity: 0.8;
+            font-size: 12px;
+        }
+        
+        /* 底部日誌區 */
+        .logs {
+            grid-area: logs;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .logs h4 {
+            margin-bottom: 10px;
+            color: #ffc107;
+            font-size: 16px;
+        }
+        
+        .log-content {
+            height: 120px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 3px 6px;
+            border-radius: 3px;
+        }
+        
+        .log-entry.info {
+            background: rgba(23, 162, 184, 0.2);
+        }
+        
+        .log-entry.success {
+            background: rgba(40, 167, 69, 0.2);
+        }
+        
+        .log-entry.error {
+            background: rgba(220, 53, 69, 0.2);
+        }
+        
+        .log-entry.game {
+            background: rgba(255, 193, 7, 0.2);
+        }
+        
+        /* 響應式設計 */
+        @media (max-width: 1200px) {
+            .game-container {
+                grid-template-areas: 
+                    "header"
+                    "sidebar"
+                    "main"
+                    "info"
+                    "logs";
+                grid-template-rows: 60px 300px 1fr 200px 150px;
+                grid-template-columns: 1fr;
+                padding: 10px;
+                gap: 10px;
             }
-            .controls {
+            
+            .sidebar {
+                max-height: 300px;
+                overflow-y: auto;
+            }
+            
+            .info-panel {
+                max-height: 200px;
+                overflow-y: auto;
+            }
+            
+            .main-game {
                 flex-direction: column;
+                gap: 15px;
             }
-            button {
-                width: 100%;
-                margin: 5px 0;
+            
+            .status-panel {
+                flex: 1;
+            }
+            
+            .action-panel {
+                flex: none;
+            }
+            
+            .game-button {
+                padding: 15px;
+                font-size: 14px;
+            }
+            
+            /* 手機版標籤頁調整 */
+            .tab-button {
+                font-size: 12px;
+                padding: 10px 12px;
+            }
+            
+            .tab-content {
+                height: calc(100% - 42px);
+            }
+        }
+        
+        /* 超小螢幕優化 */
+        @media (max-width: 480px) {
+            .header {
+                padding: 10px 15px;
+            }
+            
+            .header-right {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .id-display {
+                font-size: 11px;
+                padding: 4px 8px;
+            }
+            
+            .status-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .game-button {
+                padding: 12px;
+                font-size: 13px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎮 RichMan 線上多人遊戲</h1>
-        
-        <div id="status" class="status connecting">
-            🔌 準備連接雲端伺服器...
+    <div class="game-container">
+        <!-- 頂部狀態欄 -->
+        <div class="header">
+            <div class="header-left">
+                <h2>🎩 RichMan 雲端版</h2>
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span id="connectionStatus">連接中</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="id-display">
+                    <span class="id-label">Socket:</span>
+                    <span class="id-value" id="socketId">-</span>
+                </div>
+                <div class="id-display">
+                    <span class="id-label">玩家:</span>
+                    <span class="id-value" id="playerId">-</span>
+                </div>
+                <div class="id-display">
+                    <span class="id-label">房間:</span>
+                    <span class="id-value" id="roomId">-</span>
+                </div>
+                <div class="id-display">
+                    <span class="id-label">階段:</span>
+                    <span class="id-value" id="gamePhase">等待</span>
+                </div>
+            </div>
         </div>
-        
-        <div class="controls">
-            <button onclick="connectToServer()">🚀 連接伺服器</button>
-            <button onclick="testConnection()">🏓 測試連接</button>
-            <button onclick="joinGame()">🎯 加入遊戲</button>
-            <button onclick="showPlayers()">👥 顯示玩家</button>
-            <button onclick="clearLog()">🧹 清除日誌</button>
+
+        <!-- 左側邊欄 -->
+        <div class="sidebar">
+            <div class="tab-header">
+                <button class="tab-button active" onclick="switchTab(0)">玩家控制台</button>
+                <button class="tab-button" onclick="switchTab(1)">雲端狀態</button>
+            </div>
+            
+            <div class="tab-content">
+                <!-- 玩家控制台標籤頁 -->
+                <div class="tab-panel active" id="tab-panel-0">
+                    <h3>玩家控制台</h3>
+                    
+                    <div class="control-section">
+                        <h4>玩家設定</h4>
+                        <div class="input-group">
+                            <input type="text" id="playerName" placeholder="輸入玩家名稱" value="">
+                            <button class="btn btn-primary" onclick="createPlayer()">創建玩家</button>
+                        </div>
+                    </div>
+                    
+                    <div class="control-section">
+                        <h4>房間管理</h4>
+                        <div class="input-group">
+                            <input type="text" id="roomName" placeholder="輸入房間名稱" value="">
+                            <div class="input-row">
+                                <button class="btn" onclick="createRoom()">創建房間</button>
+                                <button class="btn" onclick="startGame()">開始遊戲</button>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="joinRoomId" placeholder="輸入房間ID加入">
+                            <button class="btn" onclick="joinRoom()">加入房間</button>
+                        </div>
+                    </div>
+                    
+                    <div class="control-section">
+                        <h4>系統操作</h4>
+                        <div class="input-row">
+                            <button class="btn" onclick="getRooms()">刷新房間</button>
+                            <button class="btn" onclick="getGameState()">獲取狀態</button>
+                            <button class="btn" onclick="clearLog()">清除日誌</button>
+                        </div>
+                        <div class="input-row" style="margin-top: 10px;">
+                            <button class="btn btn-primary" onclick="testConnection()">測試連接</button>
+                            <button class="btn" onclick="reconnect()">重新連接</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 雲端狀態標籤頁 -->
+                <div class="tab-panel" id="tab-panel-1">
+                    <h3>雲端狀態</h3>
+                    
+                    <div class="control-section">
+                        <h4>🌐 部署資訊</h4>
+                        <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; font-size: 12px; line-height: 1.4;">
+                            <div><strong>平台:</strong> Render.com</div>
+                            <div><strong>網址:</strong> <span id="currentURL">-</span></div>
+                            <div><strong>版本:</strong> v1.0 雲端版</div>
+                            <div><strong>協議:</strong> WebSocket + HTTP</div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-section">
+                        <h4>📊 連線狀態</h4>
+                        <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; font-size: 12px;">
+                            <div><strong>Socket狀態:</strong> <span id="debugSocketStatus">未連接</span></div>
+                            <div><strong>傳輸方式:</strong> <span id="debugTransport">-</span></div>
+                            <div><strong>延遲:</strong> <span id="debugLatency">-</span></div>
+                            <div><strong>重連次數:</strong> <span id="debugReconnects">0</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-section">
+                        <h4>🎮 遊戲資訊</h4>
+                        <div id="debugGameInfo" style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; font-size: 12px; max-height: 120px; overflow-y: auto;">
+                            等待遊戲開始...
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <div class="info-box">
-            <strong>🌐 雲端部署版本</strong><br>
-            • 這是 Render 雲端部署的測試版本<br>
-            • 支援多人同時連線遊玩<br>
-            • 無需設定 IP，直接開啟即可使用<br>
-            • 手機、電腦都可以連線
+
+        <!-- 主要遊戲區域 -->
+        <div class="main-game">
+            <!-- 狀況欄位 -->
+            <div class="status-panel">
+                <h3>狀況欄位</h3>
+                <div class="status-grid">
+                    <div class="status-item money-display">
+                        <div class="status-label">💰 金錢</div>
+                        <div class="status-value" id="playerMoney">$1500</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">📍 位置</div>
+                        <div class="status-value" id="playerPosition">起點</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">🏠 地產</div>
+                        <div class="status-value" id="propertyCount">0</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">🎴 技能卡</div>
+                        <div class="status-value" id="skillCardCount">0</div>
+                    </div>
+                </div>
+                <div class="properties-list">
+                    <div style="text-align: center; opacity: 0.7; padding: 20px;">
+                        尚未擁有任何地產
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作按鈕區 -->
+            <div class="action-panel">
+                <button class="game-button dice-button" id="rollDiceBtn" onclick="rollDice()" disabled>
+                    🎲 投骰子
+                </button>
+                <button class="game-button skill-button" onclick="showSkills()">
+                    🎴 技能卡
+                </button>
+                <button class="game-button end-turn-button" id="endTurnBtn" onclick="endTurn()" disabled>
+                    ⏭️ 結束回合
+                </button>
+            </div>
         </div>
-        
-        <div id="log" class="log">
-            <div>[系統] RichMan 雲端版本載入完成 ✅</div>
-            <div>[資訊] 正在初始化 Socket.IO 連接...</div>
+
+        <!-- 右側信息欄 -->
+        <div class="info-panel">
+            <div class="info-section">
+                <h4>🎮 遊戲狀態</h4>
+                <div class="game-state-display" id="gameStateDisplay">
+                    等待連接到雲端伺服器...
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h4>🏠 可用房間</h4>
+                <div class="rooms-list" id="roomsList">
+                    載入中...
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部日誌區 -->
+        <div class="logs">
+            <h4>📋 遊戲日誌</h4>
+            <div class="log-content" id="logContent">
+                <div class="log-entry info">[系統] RichMan 雲端版本初始化...</div>
+            </div>
         </div>
     </div>
 
-    <!-- Socket.IO 客戶端 -->
+    <!-- Socket.IO 客戶端庫 -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     
     <script>
-        let socket = null;
-        let logEl = document.getElementById('log');
-        let statusEl = document.getElementById('status');
-        let playerId = null;
+        // 全域變數
+        let socket;
+        let currentPlayerId = null;
+        let currentRoomId = null;
+        let isMyTurn = false;
+        let currentGameState = null;
+        let reconnectCount = 0;
+        let playerData = {
+            money: 1500,
+            position: 0,
+            properties: [],
+            skillCards: []
+        };
         
-        // 基本日誌功能
+        // DOM 元素
+        const connectionStatusEl = document.getElementById('connectionStatus');
+        const logContentEl = document.getElementById('logContent');
+        const socketIdEl = document.getElementById('socketId');
+        const playerIdEl = document.getElementById('playerId');
+        const roomIdEl = document.getElementById('roomId');
+        const gamePhaseEl = document.getElementById('gamePhase');
+        const rollDiceBtn = document.getElementById('rollDiceBtn');
+        const endTurnBtn = document.getElementById('endTurnBtn');
+        const gameStateDisplay = document.getElementById('gameStateDisplay');
+        const roomsList = document.getElementById('roomsList');
+        
+        // 生成隨機玩家名稱
+        const playerNames = ['小明', '小華', '小美', '小強', '小莉', '小王', '小李', '小陳'];
+        const randomName = playerNames[Math.floor(Math.random() * playerNames.length)] + Math.floor(Math.random() * 100);
+        document.getElementById('playerName').value = randomName;
+        document.getElementById('roomName').value = randomName + '的房間';
+        
+        // 顯示當前網址
+        document.getElementById('currentURL').textContent = window.location.origin;
+        
+        // 日誌函數
         function addLog(message, type = 'info') {
             const timestamp = new Date().toLocaleTimeString();
             const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
             logEntry.innerHTML = `[${timestamp}] ${message}`;
-            logEl.appendChild(logEntry);
-            logEl.scrollTop = logEl.scrollHeight;
+            logContentEl.appendChild(logEntry);
+            logContentEl.scrollTop = logContentEl.scrollHeight;
             console.log(message);
         }
         
-        // 更新狀態
-        function updateStatus(message, type) {
-            statusEl.textContent = message;
-            statusEl.className = `status ${type}`;
-        }
-        
-        // 清除日誌
         function clearLog() {
-            logEl.innerHTML = '<div>[系統] 日誌已清除 🧹</div>';
+            logContentEl.innerHTML = '';
+            addLog('📋 日誌已清除', 'info');
         }
         
-        // 連接到雲端伺服器
-        function connectToServer() {
-            addLog('🚀 開始連接到雲端伺服器...');
+        function updateConnectionStatus(status, type) {
+            connectionStatusEl.textContent = status;
+        }
+        
+        function updateStats() {
+            socketIdEl.textContent = socket?.id?.substring(0, 8) || '-';
+            playerIdEl.textContent = currentPlayerId?.substring(0, 8) || '-';
+            roomIdEl.textContent = currentRoomId?.substring(0, 8) || '-';
+            updateDebugInfo();
+        }
+        
+        // 標籤頁切換功能
+        function switchTab(tabIndex) {
+            document.querySelectorAll('.tab-button').forEach((btn, index) => {
+                btn.classList.toggle('active', index === tabIndex);
+            });
+            
+            document.querySelectorAll('.tab-panel').forEach((panel, index) => {
+                panel.classList.toggle('active', index === tabIndex);
+            });
+            
+            if (tabIndex === 1) {
+                updateDebugInfo();
+            }
+        }
+        
+        // 更新Debug資訊
+        function updateDebugInfo() {
+            document.getElementById('debugSocketStatus').textContent = 
+                socket?.connected ? '已連接' : '未連接';
+            
+            document.getElementById('debugTransport').textContent = 
+                socket?.io?.engine?.transport?.name || '-';
+                
+            document.getElementById('debugReconnects').textContent = reconnectCount;
+            
+            if (currentGameState) {
+                const debugGameInfoEl = document.getElementById('debugGameInfo');
+                debugGameInfoEl.innerHTML = `
+                    <strong>遊戲階段:</strong> ${currentGameState.gamePhase || '未知'}<br>
+                    <strong>玩家數量:</strong> ${currentGameState.players?.length || 0}<br>
+                    <strong>當前玩家:</strong> ${currentGameState.currentPlayerIndex ?? '無'}<br>
+                    <strong>回合數:</strong> ${currentGameState.roundNumber || 1}
+                `;
+            }
+        }
+        
+        // Socket.IO 初始化
+        function initSocket() {
+            addLog('🔌 正在連接到雲端伺服器...', 'info');
+            
+            const serverURL = window.location.origin;
+            addLog(`📡 連接到: ${serverURL}`, 'info');
             
             if (typeof io === 'undefined') {
-                addLog('❌ Socket.IO 未載入，無法連接');
-                updateStatus('❌ Socket.IO 載入失敗', 'error');
+                addLog('❌ Socket.IO 未載入！', 'error');
                 return;
             }
             
-            // 雲端部署 - 自動使用當前域名
-            const serverURL = window.location.origin;
-            addLog('📡 連接到: ' + serverURL);
-            
-            try {
-                // 斷開舊連接
-                if (socket) {
-                    socket.disconnect();
-                }
-                
-                socket = io(serverURL, {
-                    transports: ['polling', 'websocket'],
-                    timeout: 10000,
-                    forceNew: true
-                });
-                
-                setupSocketEvents();
-                updateStatus('🟡 連接中...', 'connecting');
-                
-            } catch (error) {
-                addLog('❌ 創建Socket時發生錯誤: ' + error.message);
-                updateStatus('❌ 連接失敗', 'error');
-            }
-        }
-        
-        // 設置Socket事件
-        function setupSocketEvents() {
-            socket.on('connect', () => {
-                playerId = socket.id;
-                addLog('✅ 成功連接雲端伺服器！');
-                addLog('🆔 玩家ID: ' + playerId);
-                updateStatus('🟢 已連接雲端', 'connected');
+            socket = io(serverURL, {
+                transports: ['websocket', 'polling'],
+                timeout: 10000,
+                forceNew: true
             });
             
-            socket.on('connect_error', (error) => {
-                addLog('❌ 連接錯誤: ' + (error.message || error.type || error));
-                updateStatus('🔴 連接失敗', 'error');
+            setupSocketEvents();
+        }
+        
+        function setupSocketEvents() {
+            socket.on('connect', () => {
+                addLog('✅ 雲端連接成功！', 'success');
+                addLog(`🔗 Socket ID: ${socket.id}`, 'success');
+                updateConnectionStatus('已連接雲端', 'connected');
+                updateStats();
+                getRooms();
+                
+                // 自動創建玩家
+                setTimeout(() => {
+                    if (!currentPlayerId) {
+                        createPlayer();
+                    }
+                }, 1000);
             });
             
             socket.on('disconnect', (reason) => {
-                addLog('❌ 連接中斷: ' + reason);
-                updateStatus('🟡 連接中斷', 'error');
+                addLog(`❌ 連接中斷: ${reason}`, 'error');
+                updateConnectionStatus('連接中斷', 'error');
             });
             
-            // 遊戲相關事件
-            socket.on('player:joined', (data) => {
-                addLog('🎮 玩家加入: ' + JSON.stringify(data));
+            socket.on('connect_error', (error) => {
+                addLog(`❌ 連接錯誤: ${error.message || error}`, 'error');
+                updateConnectionStatus('連接失敗', 'error');
             });
             
-            socket.on('game:players', (players) => {
-                addLog('👥 目前玩家: ' + players.length + ' 人');
-                players.forEach((player, index) => {
-                    addLog(`  ${index + 1}. ${player.name} (${player.id})`);
-                });
+            socket.on('reconnect', (attemptNumber) => {
+                reconnectCount++;
+                addLog(`🔄 重新連接成功 (${reconnectCount})`, 'success');
+                updateDebugInfo();
             });
             
-            // Ping/Pong測試
+            // 遊戲事件
+            socket.on('authenticated', (data) => {
+                if (data.success) {
+                    currentPlayerId = data.player.id;
+                    addLog(`👤 玩家創建成功: ${data.player.name}`, 'success');
+                    updateStats();
+                }
+            });
+            
+            socket.on('room_created', (data) => {
+                if (data.success) {
+                    currentRoomId = data.room.id;
+                    addLog(`🏠 房間創建成功: ${data.room.name}`, 'success');
+                    updateStats();
+                    getRooms();
+                }
+            });
+            
+            socket.on('game_started', (data) => {
+                if (data.success) {
+                    addLog('🎮 遊戲開始！', 'game');
+                    gamePhaseEl.textContent = '遊戲中';
+                    if (data.gameState) {
+                        updateGameState(data.gameState);
+                    }
+                }
+            });
+            
+            socket.on('turn_started', (data) => {
+                if (data.playerId === currentPlayerId) {
+                    addLog(`🎯 輪到你了！回合 ${data.roundNumber}`, 'game');
+                    isMyTurn = true;
+                    rollDiceBtn.disabled = false;
+                    endTurnBtn.disabled = false;
+                } else {
+                    addLog(`🎯 輪到其他玩家`, 'info');
+                    isMyTurn = false;
+                    rollDiceBtn.disabled = true;
+                    endTurnBtn.disabled = true;
+                }
+                updateDebugInfo();
+            });
+            
+            socket.on('dice_rolled', (data) => {
+                const result = data.diceResult;
+                addLog(`🎲 擲骰結果: ${result.dice1} + ${result.dice2} = ${result.total}`, 'game');
+            });
+            
             socket.on('pong', (data) => {
                 const latency = Date.now() - data.timestamp;
-                addLog('🏓 Pong回應！延遲: ' + latency + 'ms');
+                addLog(`🏓 Pong！延遲: ${latency}ms`, 'success');
+                document.getElementById('debugLatency').textContent = latency + 'ms';
+            });
+            
+            socket.on('rooms_list', (data) => {
+                if (data.success) {
+                    displayRooms(data.rooms);
+                }
             });
         }
         
-        // 加入遊戲
-        function joinGame() {
-            if (!socket || !socket.connected) {
-                addLog('❌ 請先連接伺服器');
+        function updateGameState(gameState) {
+            currentGameState = gameState;
+            if (gameState) {
+                gameStateDisplay.innerHTML = `
+                    <strong>階段:</strong> ${gameState.gamePhase || '未知'}<br>
+                    <strong>玩家數:</strong> ${gameState.players?.length || 0}<br>
+                    <strong>回合:</strong> ${gameState.roundNumber || 1}
+                `;
+                updateDebugInfo();
+            }
+        }
+        
+        function displayRooms(rooms) {
+            if (!rooms || rooms.length === 0) {
+                roomsList.innerHTML = '<div style="opacity: 0.7; text-align: center; padding: 20px;">目前沒有可用房間</div>';
                 return;
             }
             
-            const playerName = prompt('請輸入玩家名稱:', '玩家' + Math.floor(Math.random() * 1000));
-            if (!playerName) return;
-            
-            const playerData = {
-                name: playerName,
-                avatar: 'default',
-                timestamp: Date.now()
-            };
-            
-            addLog('🎯 加入遊戲: ' + playerName);
-            socket.emit('player:join', playerData);
+            roomsList.innerHTML = rooms.map(room => `
+                <div class="room-item">
+                    <div class="room-name">${room.name}</div>
+                    <div class="room-info">
+                        玩家: ${room.playerCount}/${room.maxPlayers} | 狀態: ${room.status}
+                    </div>
+                </div>
+            `).join('');
         }
         
-        // 顯示所有玩家
-        function showPlayers() {
+        // 遊戲操作函數
+        function createPlayer() {
+            const playerName = document.getElementById('playerName').value || randomName;
+            
             if (!socket || !socket.connected) {
-                addLog('❌ 請先連接伺服器');
+                addLog('❌ 請先連接到伺服器', 'error');
                 return;
             }
             
-            addLog('👥 請求玩家列表...');
-            socket.emit('game:getPlayers');
+            addLog(`👤 正在創建玩家: ${playerName}`, 'info');
+            socket.emit('authenticate', { name: playerName, avatar: 'default' });
         }
         
-        // 測試連接
+        function createRoom() {
+            const roomName = document.getElementById('roomName').value || '測試房間';
+            
+            if (!currentPlayerId) {
+                addLog('❌ 請先創建玩家', 'error');
+                return;
+            }
+            
+            addLog(`🏠 正在創建房間: ${roomName}`, 'info');
+            socket.emit('create_room', {
+                name: roomName,
+                maxPlayers: 4,
+                settings: { startingMoney: 1500 }
+            });
+        }
+        
+        function startGame() {
+            if (!currentRoomId) {
+                addLog('❌ 請先創建或加入房間', 'error');
+                return;
+            }
+            
+            addLog('🎮 正在開始遊戲...', 'info');
+            socket.emit('start_game', { roomId: currentRoomId });
+        }
+        
+        function rollDice() {
+            if (!isMyTurn) {
+                addLog('❌ 還沒輪到你', 'error');
+                return;
+            }
+            
+            addLog('🎲 擲骰子...', 'game');
+            socket.emit('game_action', {
+                type: 'ROLL_DICE',
+                playerId: currentPlayerId
+            });
+            rollDiceBtn.disabled = true;
+        }
+        
+        function endTurn() {
+            if (!isMyTurn) {
+                addLog('❌ 還沒輪到你', 'error');
+                return;
+            }
+            
+            addLog('⏭️ 結束回合', 'game');
+            socket.emit('game_action', {
+                type: 'END_TURN',
+                playerId: currentPlayerId
+            });
+            
+            isMyTurn = false;
+            rollDiceBtn.disabled = true;
+            endTurnBtn.disabled = true;
+        }
+        
+        function getRooms() {
+            if (socket && socket.connected) {
+                socket.emit('get_rooms', {});
+            }
+        }
+        
         function testConnection() {
             if (!socket || !socket.connected) {
-                addLog('❌ 請先連接伺服器');
+                addLog('❌ Socket未連接', 'error');
                 return;
             }
             
-            addLog('🏓 發送Ping測試...');
+            addLog('🏓 發送Ping測試...', 'info');
             socket.emit('ping', { timestamp: Date.now() });
         }
         
-        // 頁面載入完成後自動連接
-        window.onload = function() {
-            addLog('🌐 雲端版本初始化完成');
-            
-            // 檢測Socket.IO
-            if (typeof io !== 'undefined') {
-                addLog('✅ Socket.IO 已載入 (版本: ' + (io.version || 'unknown') + ')');
-                // 自動連接
-                setTimeout(connectToServer, 1000);
-            } else {
-                addLog('❌ Socket.IO 載入失敗');
+        function reconnect() {
+            addLog('🔄 重新連接中...', 'info');
+            if (socket) {
+                socket.disconnect();
             }
-        };
+            setTimeout(initSocket, 1000);
+        }
         
-        // 錯誤處理
-        window.onerror = function(msg, url, line, col, error) {
-            addLog('❌ JavaScript錯誤: ' + msg + ' (行:' + line + ')');
-            return false;
+        function showSkills() {
+            addLog('🎴 技能卡功能開發中...', 'info');
+        }
+        
+        function joinRoom() {
+            addLog('🚪 加入房間功能開發中...', 'info');
+        }
+        
+        function getGameState() {
+            if (socket && socket.connected) {
+                socket.emit('get_game_state', {});
+            }
+        }
+        
+        // 頁面載入時初始化
+        window.onload = function() {
+            addLog('🌐 RichMan 雲端版本初始化完成', 'info');
+            
+            if (typeof io !== 'undefined') {
+                addLog(`✅ Socket.IO 版本: ${io.version || 'unknown'}`, 'info');
+                setTimeout(initSocket, 1000);
+            } else {
+                addLog('❌ Socket.IO 載入失敗', 'error');
+            }
         };
     </script>
 </body>
