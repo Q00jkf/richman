@@ -118,9 +118,17 @@ Thumbs.db
 
 # Output files (use output/ directory instead)
 *.csv
-*.json
 *.xlsx
 output/
+# Ignore JSON files in output directory only
+output/*.json
+temp/*.json
+logs/*.json
+# But keep important package files
+!package.json
+!package-lock.json
+!tsconfig.json
+!jsconfig.json
 
 # Game-specific
 game-saves/

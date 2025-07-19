@@ -1,0 +1,76 @@
+{
+  "name": "richman",
+  "version": "1.0.0",
+  "description": "Online multiplayer Monopoly game with real-time gameplay",
+  "main": "server.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "nodemon src/main/server/index.js",
+    "client": "cd src/main/client && npm start",
+    "build": "echo 'Render build complete'",
+    "build:client": "cd src/main/client && npm run build",
+    "build:server": "echo 'Server build complete'",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:api": "node tools/test-api.js",
+    "test:websocket": "node tools/test-websocket.js basic",
+    "test:websocket:multi": "node tools/test-websocket.js multi",
+    "test:functional": "npm run test:api && npm run test:websocket",
+    "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint src/ --ext .js,.jsx,.ts,.tsx --fix",
+    "start": "node server.js",
+    "start:render": "node server.js",
+    "restart": "bash auto-restart.sh",
+    "restart:win": "auto-restart.bat",
+    "quick-restart": "pkill -f nodemon && sleep 2 && npm run server"
+  },
+  "keywords": [
+    "monopoly",
+    "multiplayer",
+    "game",
+    "online",
+    "realtime",
+    "websocket",
+    "board-game"
+  ],
+  "author": "Q00jkf <photo841841@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "bcrypt": "^5.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.5.0",
+    "socket.io": "^4.7.2",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.0",
+    "@types/cors": "^2.8.13",
+    "@types/express": "^4.17.17",
+    "@types/jest": "^29.5.3",
+    "@types/jsonwebtoken": "^9.0.2",
+    "@types/node": "^20.5.0",
+    "@types/socket.io": "^3.0.2",
+    "@types/uuid": "^9.0.2",
+    "@typescript-eslint/eslint-plugin": "^6.2.1",
+    "@typescript-eslint/parser": "^6.2.1",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.46.0",
+    "jest": "^29.6.2",
+    "nodemon": "^3.1.10",
+    "socket.io-client": "^4.8.1",
+    "supertest": "^6.3.3",
+    "typescript": "^5.1.6"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Q00jkf/richman.git"
+  }
+}
