@@ -790,7 +790,7 @@
         <div class="sidebar">
             <div class="tab-header">
                 <button class="tab-button active" onclick="switchTab(0)">玩家控制台</button>
-                <button class="tab-button" onclick="switchTab(1)">雲端狀態</button>
+                <button class="tab-button" onclick="switchTab(1)">狀態監控</button>
             </div>
             
             <div class="tab-content">
@@ -838,23 +838,35 @@
                     </div>
                 </div>
                 
-                <!-- 雲端狀態標籤頁 -->
+                <!-- 狀態監控標籤頁 -->
                 <div class="tab-panel" id="tab-panel-1">
-                    <h3>雲端狀態</h3>
+                    <h3>狀態監控</h3>
                     
                     <div class="control-section">
-                        <h4>🌐 部署資訊</h4>
+                        <h4>🎮 遊戲狀態</h4>
+                        <div id="debugGameState" style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; font-size: 12px; line-height: 1.4;">
+                            <div><strong>遊戲階段:</strong> <span id="debugGamePhase">等待</span></div>
+                            <div><strong>當前回合:</strong> <span id="debugRoundNumber">-</span></div>
+                            <div><strong>輪到玩家:</strong> <span id="debugCurrentPlayer">-</span></div>
+                            <div><strong>我的回合:</strong> <span id="debugMyTurn">否</span></div>
+                            <div><strong>房間玩家:</strong> <span id="debugPlayerCount">0</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-section">
+                        <h4>👤 我的狀態</h4>
                         <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; font-size: 12px; line-height: 1.4;">
-                            <div><strong>平台:</strong> Render.com</div>
-                            <div><strong>網址:</strong> <span id="currentURL">-</span></div>
-                            <div><strong>版本:</strong> v1.0 雲端版</div>
-                            <div><strong>協議:</strong> WebSocket + HTTP</div>
+                            <div><strong>玩家ID:</strong> <span id="debugMyPlayerId">-</span></div>
+                            <div><strong>金錢:</strong> <span id="debugMyMoney">$1500</span></div>
+                            <div><strong>位置:</strong> <span id="debugMyPosition">起點</span></div>
+                            <div><strong>地產數:</strong> <span id="debugMyProperties">0</span></div>
+                            <div><strong>技能卡:</strong> <span id="debugMySkills">0</span></div>
                         </div>
                     </div>
                     
                     <div class="control-section">
                         <h4>📊 連線狀態</h4>
-                        <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; font-size: 12px;">
+                        <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; font-size: 12px; line-height: 1.4;">
                             <div><strong>Socket狀態:</strong> <span id="debugSocketStatus">未連接</span></div>
                             <div><strong>傳輸方式:</strong> <span id="debugTransport">-</span></div>
                             <div><strong>延遲:</strong> <span id="debugLatency">-</span></div>
@@ -863,9 +875,12 @@
                     </div>
                     
                     <div class="control-section">
-                        <h4>🎮 遊戲資訊</h4>
-                        <div id="debugGameInfo" style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; font-size: 12px; max-height: 120px; overflow-y: auto;">
-                            等待遊戲開始...
+                        <h4>🌐 部署資訊</h4>
+                        <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; font-size: 12px; line-height: 1.4;">
+                            <div><strong>平台:</strong> Render.com</div>
+                            <div><strong>網址:</strong> <span id="currentURL">-</span></div>
+                            <div><strong>版本:</strong> v1.0 雲端版</div>
+                            <div><strong>協議:</strong> WebSocket + HTTP</div>
                         </div>
                     </div>
                 </div>
@@ -1025,6 +1040,7 @@
         
         // 更新Debug資訊
         function updateDebugInfo() {
+            // 連線狀態
             document.getElementById('debugSocketStatus').textContent = 
                 socket?.connected ? '已連接' : '未連接';
             
@@ -1033,15 +1049,41 @@
                 
             document.getElementById('debugReconnects').textContent = reconnectCount;
             
+            // 遊戲狀態
             if (currentGameState) {
-                const debugGameInfoEl = document.getElementById('debugGameInfo');
-                debugGameInfoEl.innerHTML = `
-                    <strong>遊戲階段:</strong> ${currentGameState.gamePhase || '未知'}<br>
-                    <strong>玩家數量:</strong> ${currentGameState.players?.length || 0}<br>
-                    <strong>當前玩家:</strong> ${currentGameState.currentPlayerIndex ?? '無'}<br>
-                    <strong>回合數:</strong> ${currentGameState.roundNumber || 1}
-                `;
+                document.getElementById('debugGamePhase').textContent = 
+                    currentGameState.gamePhase || '等待';
+                    
+                document.getElementById('debugRoundNumber').textContent = 
+                    currentGameState.roundNumber || '-';
+                    
+                document.getElementById('debugPlayerCount').textContent = 
+                    currentGameState.players?.length || 0;
+                    
+                // 當前玩家
+                let currentPlayerName = '-';
+                if (currentGameState.players && currentGameState.currentPlayerIndex !== undefined) {
+                    const currentPlayer = currentGameState.players[currentGameState.currentPlayerIndex];
+                    currentPlayerName = currentPlayer?.name || '-';
+                }
+                document.getElementById('debugCurrentPlayer').textContent = currentPlayerName;
+                
+                // 我的回合
+                document.getElementById('debugMyTurn').textContent = isMyTurn ? '是' : '否';
+                
+                // 我的狀態
+                const myPlayer = currentGameState.players?.find(p => p.id === currentPlayerId);
+                if (myPlayer) {
+                    document.getElementById('debugMyMoney').textContent = `$${myPlayer.money || 1500}`;
+                    document.getElementById('debugMyPosition').textContent = getBoardSpaceName(myPlayer.position || 0);
+                    document.getElementById('debugMyProperties').textContent = (myPlayer.properties || []).length;
+                    document.getElementById('debugMySkills').textContent = (myPlayer.skillCards || []).length;
+                }
             }
+            
+            // 我的玩家ID
+            document.getElementById('debugMyPlayerId').textContent = 
+                currentPlayerId?.substring(0, 12) || '-';
         }
         
         // Socket.IO 初始化
@@ -1160,6 +1202,15 @@
                 addLog(`🎲 擲骰結果: ${result.dice1} + ${result.dice2} = ${result.total}`, 'game');
             });
             
+            socket.on('player_moved', (data) => {
+                addLog(`🚶 ${data.playerName} 移動: 位置 ${data.oldPosition} → ${data.newPosition}`, 'game');
+                
+                // 如果是當前玩家，更新位置顯示
+                if (data.playerId === currentPlayerId) {
+                    updatePlayerPosition(data.newPosition);
+                }
+            });
+            
             socket.on('pong', (data) => {
                 const latency = Date.now() - data.timestamp;
                 addLog(`🏓 Pong！延遲: ${latency}ms`, 'success');
@@ -1196,8 +1247,46 @@
                     <strong>玩家數:</strong> ${gameState.players?.length || 0}<br>
                     <strong>回合:</strong> ${gameState.roundNumber || 1}
                 `;
+                
+                // 更新當前玩家的狀態
+                if (gameState.players && currentPlayerId) {
+                    const currentPlayer = gameState.players.find(p => p.id === currentPlayerId);
+                    if (currentPlayer) {
+                        updatePlayerData(currentPlayer);
+                    }
+                }
+                
                 updateDebugInfo();
             }
+        }
+        
+        function updatePlayerData(playerData) {
+            if (playerData) {
+                // 更新玩家狀態顯示
+                document.getElementById('playerMoney').textContent = `$${playerData.money || 1500}`;
+                document.getElementById('playerPosition').textContent = getBoardSpaceName(playerData.position || 0);
+                document.getElementById('propertyCount').textContent = (playerData.properties || []).length;
+                document.getElementById('skillCardCount').textContent = (playerData.skillCards || []).length;
+            }
+        }
+        
+        function updatePlayerPosition(newPosition) {
+            document.getElementById('playerPosition').textContent = getBoardSpaceName(newPosition);
+            addLog(`📍 您的位置更新為: ${getBoardSpaceName(newPosition)}`, 'info');
+        }
+        
+        function getBoardSpaceName(position) {
+            const spaceNames = [
+                '起點', '台北市大安區', '社區基金', '台北市信義區', '稅務', 
+                '台鐵台北站', '台北市中山區', '機會', '台北市松山區', '台北市大同區',
+                '監獄', '桃園市中壢區', '電力公司', '桃園市平鎮區', '桃園市桃園區',
+                '桃園機場', '新竹市東區', '社區基金', '新竹市北區', '新竹科學園區',
+                '免費停車', '台中市西屯區', '機會', '台中市南屯區', '台中市北屯區',
+                '台鐵台中站', '台中市中區', '台中市東區', '自來水公司', '台中市南區',
+                '進監獄', '高雄市前鎮區', '高雄市苓雅區', '社區基金', '高雄市鼓山區',
+                '高雄機場', '機會', '高雄市左營區', '奢侈稅', '高雄市三民區'
+            ];
+            return spaceNames[position] || `位置 ${position}`;
         }
         
         function displayRooms(rooms) {
