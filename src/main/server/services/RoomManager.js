@@ -3,7 +3,7 @@
  */
 
 const { v4: uuidv4 } = require('uuid');
-const { RoomStatus, GameSettings, ErrorCode } = require('../../shared/constants/GameConstants');
+const { RoomStatus, GameConfig, ErrorCode } = require('../../shared/constants/GameConstants');
 
 class RoomManager {
   constructor() {
@@ -34,12 +34,12 @@ class RoomManager {
         joinedAt: new Date()
       }]]),
       settings: {
-        maxPlayers: roomSettings.maxPlayers || GameSettings.MAX_PLAYERS,
-        minPlayers: roomSettings.minPlayers || GameSettings.MIN_PLAYERS,
-        gameTimeLimit: roomSettings.gameTimeLimit || GameSettings.DEFAULT_GAME_TIME_LIMIT,
-        turnTimeLimit: roomSettings.turnTimeLimit || GameSettings.DEFAULT_TURN_TIME_LIMIT,
-        startingMoney: roomSettings.startingMoney || GameSettings.DEFAULT_STARTING_MONEY,
-        salary: roomSettings.salary || GameSettings.DEFAULT_SALARY,
+        maxPlayers: roomSettings.maxPlayers || GameConfig.MAX_PLAYERS,
+        minPlayers: roomSettings.minPlayers || GameConfig.MIN_PLAYERS,
+        gameTimeLimit: roomSettings.gameTimeLimit || GameConfig.DEFAULT_GAME_TIME_LIMIT,
+        turnTimeLimit: roomSettings.turnTimeLimit || GameConfig.DEFAULT_TURN_TIME_LIMIT,
+        startingMoney: roomSettings.startingMoney || GameConfig.DEFAULT_STARTING_MONEY,
+        salary: roomSettings.salary || GameConfig.DEFAULT_SALARY,
         isPrivate: roomSettings.isPrivate || false,
         password: roomSettings.password || null,
         allowSpectators: roomSettings.allowSpectators || true,

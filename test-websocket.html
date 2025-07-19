@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RichMan WebSocket 測試頁面</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .status.connecting {
+            background: rgba(255, 193, 7, 0.3);
+            border: 2px solid #ffc107;
+        }
+        
+        .status.connected {
+            background: rgba(40, 167, 69, 0.3);
+            border: 2px solid #28a745;
+        }
+        
+        .status.error {
+            background: rgba(220, 53, 69, 0.3);
+            border: 2px solid #dc3545;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .log {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        
+        .log-entry.info {
+            background: rgba(23, 162, 184, 0.2);
+        }
+        
+        .log-entry.success {
+            background: rgba(40, 167, 69, 0.2);
+        }
+        
+        .log-entry.error {
+            background: rgba(220, 53, 69, 0.2);
+        }
+        
+        .log-entry.game {
+            background: rgba(255, 193, 7, 0.2);
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ffc107;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 RichMan WebSocket 測試</h1>
+        
+        <div id="status" class="status connecting">
+            🔌 正在連接到伺服器...
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="socketId">-</div>
+                <div class="stat-label">Socket ID</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="playerId">-</div>
+                <div class="stat-label">玩家 ID</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="roomId">-</div>
+                <div class="stat-label">房間 ID</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="gamePhase">-</div>
+                <div class="stat-label">遊戲階段</div>
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <input type="text" id="playerName" placeholder="輸入玩家名稱" value="測試玩家">
+            <input type="text" id="roomName" placeholder="輸入房間名稱" value="測試房間">
+        </div>
+        
+        <div class="controls">
+            <button onclick="createPlayer()">創建玩家</button>
+            <button onclick="createRoom()">創建房間</button>
+            <button onclick="startGame()">開始遊戲</button>
+            <button onclick="rollDice()" id="rollDiceBtn" disabled>擲骰子</button>
+            <button onclick="endTurn()" id="endTurnBtn" disabled>結束回合</button>
+            <button onclick="clearLog()">清除日誌</button>
+        </div>
+        
+        <div id="log" class="log">
+            <div class="log-entry info">📋 等待連接...</div>
+        </div>
+    </div>
+
+    <!-- Socket.IO 客戶端庫 -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <script>
+        // 全域變數
+        let socket;
+        let currentPlayerId = null;
+        let currentRoomId = null;
+        let isMyTurn = false;
+        
+        // DOM 元素
+        const statusEl = document.getElementById('status');
+        const logEl = document.getElementById('log');
+        const socketIdEl = document.getElementById('socketId');
+        const playerIdEl = document.getElementById('playerId');
+        const roomIdEl = document.getElementById('roomId');
+        const gamePhaseEl = document.getElementById('gamePhase');
+        const rollDiceBtn = document.getElementById('rollDiceBtn');
+        const endTurnBtn = document.getElementById('endTurnBtn');
+        
+        // 日誌函數
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logEl.appendChild(logEntry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        
+        function clearLog() {
+            logEl.innerHTML = '';
+            addLog('📋 日誌已清除', 'info');
+        }
+        
+        function updateStatus(message, type) {
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function updateStats() {
+            socketIdEl.textContent = socket?.id?.substring(0, 8) || '-';
+            playerIdEl.textContent = currentPlayerId?.substring(0, 8) || '-';
+            roomIdEl.textContent = currentRoomId?.substring(0, 8) || '-';
+        }
+        
+        // 初始化 Socket.IO 連接
+        function initSocket() {
+            addLog('🔌 正在連接到 RichMan 伺服器...', 'info');
+            
+            socket = io('http://localhost:5000', {
+                transports: ['websocket', 'polling']
+            });
+            
+            // 連接事件
+            socket.on('connect', () => {
+                addLog('✅ WebSocket 連接成功！', 'success');
+                updateStatus('🟢 已連接', 'connected');
+                updateStats();
+            });
+            
+            socket.on('disconnect', (reason) => {
+                addLog(`❌ 連接中斷: ${reason}`, 'error');
+                updateStatus('🔴 連接中斷', 'error');
+                updateStats();
+            });
+            
+            socket.on('connect_error', (error) => {
+                addLog(`❌ 連接錯誤: ${error.message}`, 'error');
+                updateStatus('🔴 連接失敗', 'error');
+            });
+            
+            // 玩家事件
+            socket.on('player:created', (data) => {
+                currentPlayerId = data.playerId;
+                addLog(`👤 玩家創建成功: ${data.playerName}`, 'success');
+                updateStats();
+            });
+            
+            // 房間事件
+            socket.on('room:created', (data) => {
+                currentRoomId = data.roomId;
+                addLog(`🏠 房間創建成功: ${data.roomName}`, 'success');
+                updateStats();
+            });
+            
+            socket.on('room:joined', (data) => {
+                addLog(`🚪 成功加入房間`, 'success');
+                updateStats();
+            });
+            
+            // 遊戲事件
+            socket.on('game:started', (data) => {
+                addLog('🎮 遊戲開始！', 'game');
+                gamePhaseEl.textContent = '遊戲中';
+            });
+            
+            socket.on('game:turn_started', (data) => {
+                if (data.playerId === currentPlayerId) {
+                    addLog('🎯 輪到你了！', 'game');
+                    isMyTurn = true;
+                    rollDiceBtn.disabled = false;
+                    endTurnBtn.disabled = false;
+                } else {
+                    addLog(`🎯 輪到其他玩家: ${data.playerId.substring(0, 8)}`, 'info');
+                    isMyTurn = false;
+                    rollDiceBtn.disabled = true;
+                    endTurnBtn.disabled = true;
+                }
+            });
+            
+            socket.on('game:dice_rolled', (data) => {
+                const result = data.diceResult;
+                addLog(`🎲 擲骰結果: ${result.dice1} + ${result.dice2} = ${result.total}`, 'game');
+            });
+            
+            socket.on('game:player_moved', (data) => {
+                addLog(`🚶 玩家移動: 從位置 ${data.oldPosition} 到 ${data.newPosition}`, 'game');
+            });
+            
+            socket.on('game:property_bought', (data) => {
+                addLog(`🏠 地產購買: 玩家購買了地產 ${data.propertyId}，價格 $${data.price}`, 'game');
+            });
+            
+            socket.on('game:rent_paid', (data) => {
+                addLog(`💰 租金支付: $${data.amount}`, 'game');
+            });
+            
+            // 錯誤事件
+            socket.on('error', (data) => {
+                addLog(`❌ 錯誤: ${data.message || data}`, 'error');
+            });
+            
+            // 監聽所有事件（調試用）
+            socket.onAny((eventName, ...args) => {
+                if (!eventName.startsWith('game:') && !eventName.startsWith('room:') && !eventName.startsWith('player:')) {
+                    addLog(`📡 事件: ${eventName}`, 'info');
+                }
+            });
+        }
+        
+        // 遊戲操作函數
+        function createPlayer() {
+            const playerName = document.getElementById('playerName').value || '測試玩家';
+            
+            if (!socket || !socket.connected) {
+                addLog('❌ 請先連接到伺服器', 'error');
+                return;
+            }
+            
+            addLog(`👤 正在創建玩家: ${playerName}`, 'info');
+            
+            socket.emit('player:create', {
+                name: playerName,
+                avatar: 'test.png'
+            });
+        }
+        
+        function createRoom() {
+            const roomName = document.getElementById('roomName').value || '測試房間';
+            
+            if (!currentPlayerId) {
+                addLog('❌ 請先創建玩家', 'error');
+                return;
+            }
+            
+            addLog(`🏠 正在創建房間: ${roomName}`, 'info');
+            
+            socket.emit('room:create', {
+                name: roomName,
+                maxPlayers: 4,
+                hostPlayerId: currentPlayerId,
+                settings: {
+                    startingMoney: 1500,
+                    timeLimit: 120
+                }
+            });
+        }
+        
+        function startGame() {
+            if (!currentRoomId) {
+                addLog('❌ 請先創建或加入房間', 'error');
+                return;
+            }
+            
+            addLog('🎮 正在開始遊戲...', 'info');
+            
+            socket.emit('game:start', {
+                roomId: currentRoomId,
+                hostPlayerId: currentPlayerId
+            });
+        }
+        
+        function rollDice() {
+            if (!isMyTurn) {
+                addLog('❌ 還沒輪到你', 'error');
+                return;
+            }
+            
+            addLog('🎲 擲骰子...', 'game');
+            
+            socket.emit('game:action', {
+                type: 'ROLL_DICE',
+                playerId: currentPlayerId
+            });
+            
+            rollDiceBtn.disabled = true;
+        }
+        
+        function endTurn() {
+            if (!isMyTurn) {
+                addLog('❌ 還沒輪到你', 'error');
+                return;
+            }
+            
+            addLog('⏭️ 結束回合', 'game');
+            
+            socket.emit('game:action', {
+                type: 'END_TURN',
+                playerId: currentPlayerId
+            });
+            
+            isMyTurn = false;
+            rollDiceBtn.disabled = true;
+            endTurnBtn.disabled = true;
+        }
+        
+        // 頁面載入時初始化
+        window.onload = function() {
+            initSocket();
+        };
+        
+        // 頁面關閉時斷開連接
+        window.onbeforeunload = function() {
+            if (socket) {
+                socket.disconnect();
+            }
+        };
+    </script>
+</body>
+</html>

@@ -84,34 +84,74 @@ router.get('/:roomId', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { playerId, settings } = req.body;
+    const { 
+      playerId, 
+      name, 
+      maxPlayers, 
+      isPrivate, 
+      password,
+      settings = {},
+      ...otherSettings 
+    } = req.body;
     
-    if (!playerId) {
-      return res.status(400).json({
-        success: false,
-        error: ErrorCode.VALIDATION_ERROR,
-        message: 'Player ID is required'
-      });
+    // 如果沒有 playerId，但有其他房間信息，創建一個臨時玩家
+    let hostPlayer;
+    if (playerId) {
+      hostPlayer = playerManager.getPlayer(playerId);
+      if (!hostPlayer) {
+        return res.status(404).json({
+          success: false,
+          error: ErrorCode.PLAYER_NOT_FOUND,
+          message: 'Player not found'
+        });
+      }
+    } else {
+      // 創建臨時主機玩家
+      try {
+        hostPlayer = playerManager.createPlayer({
+          name: 'Host Player',
+          avatar: 'default.png'
+        });
+        if (!hostPlayer) {
+          return res.status(500).json({
+            success: false,
+            error: ErrorCode.PLAYER_CREATION_FAILED,
+            message: 'Failed to create host player'
+          });
+        }
+      } catch (error) {
+        console.error('Error creating temporary player:', error);
+        return res.status(500).json({
+          success: false,
+          error: ErrorCode.PLAYER_CREATION_FAILED,
+          message: 'Failed to create host player'
+        });
+      }
     }
     
-    const player = playerManager.getPlayer(playerId);
-    if (!player) {
-      return res.status(404).json({
-        success: false,
-        error: ErrorCode.PLAYER_NOT_FOUND,
-        message: 'Player not found'
-      });
-    }
+    // 合併房間設置
+    const roomSettings = {
+      name: name || `${hostPlayer.name}'s Room`,
+      maxPlayers: maxPlayers || 4,
+      isPrivate: isPrivate || false,
+      password: password || null,
+      ...settings,
+      ...otherSettings
+    };
     
-    const result = roomManager.createRoom(player, settings);
+    const result = roomManager.createRoom(hostPlayer, roomSettings);
     
     if (result.success) {
       // 更新玩家狀態
-      playerManager.updatePlayerRoom(playerId, result.room.id);
+      if (playerManager.updatePlayerRoom) {
+        playerManager.updatePlayerRoom(hostPlayer.id, result.room.id);
+      }
       
       res.status(201).json({
         success: true,
-        room: result.room
+        room: result.room,
+        roomId: result.room.id,
+        hostPlayerId: hostPlayer.id
       });
     } else {
       res.status(400).json({
