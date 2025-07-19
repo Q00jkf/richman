@@ -843,22 +843,13 @@
                     <h3>狀態監控</h3>
                     
                     <div class="control-section">
-                        <h4>🎮 遊戲狀態</h4>
-                        <div id="debugGameState" style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; font-size: 12px; line-height: 1.4;">
-                            <div><strong>遊戲階段:</strong> <span id="debugGamePhase">等待</span></div>
-                            <div><strong>當前回合:</strong> <span id="debugRoundNumber">-</span></div>
-                            <div><strong>輪到玩家:</strong> <span id="debugCurrentPlayer">-</span></div>
-                            <div><strong>我的回合:</strong> <span id="debugMyTurn">否</span></div>
-                            <div><strong>房間玩家:</strong> <span id="debugPlayerCount">0</span></div>
-                        </div>
-                    </div>
-                    
-                    <div class="control-section">
                         <h4>👤 我的狀態</h4>
                         <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; font-size: 12px; line-height: 1.4;">
                             <div><strong>玩家ID:</strong> <span id="debugMyPlayerId">-</span></div>
                             <div><strong>金錢:</strong> <span id="debugMyMoney">$1500</span></div>
                             <div><strong>位置:</strong> <span id="debugMyPosition">起點</span></div>
+                            <div><strong>年齡:</strong> <span id="debugMyAge">18</span>歲</div>
+                            <div><strong>骰子次數:</strong> <span id="debugMyDiceCount">0</span>/5</div>
                             <div><strong>地產數:</strong> <span id="debugMyProperties">0</span></div>
                             <div><strong>技能卡:</strong> <span id="debugMySkills">0</span></div>
                         </div>
@@ -934,9 +925,9 @@
         <!-- 右側信息欄 -->
         <div class="info-panel">
             <div class="info-section">
-                <h4>🎮 遊戲狀態</h4>
-                <div class="game-state-display" id="gameStateDisplay">
-                    等待連接到雲端伺服器...
+                <h4>👥 對手資訊</h4>
+                <div class="opponents-info" id="opponentsInfo">
+                    等待其他玩家加入...
                 </div>
             </div>
             
@@ -972,7 +963,9 @@
             money: 1500,
             position: 0,
             properties: [],
-            skillCards: []
+            skillCards: [],
+            age: 18,
+            diceRollCount: 0
         };
         
         // DOM 元素
@@ -984,7 +977,7 @@
         const gamePhaseEl = document.getElementById('gamePhase');
         const rollDiceBtn = document.getElementById('rollDiceBtn');
         const endTurnBtn = document.getElementById('endTurnBtn');
-        const gameStateDisplay = document.getElementById('gameStateDisplay');
+        const opponentsInfoEl = document.getElementById('opponentsInfo');
         const roomsList = document.getElementById('roomsList');
         
         // 生成隨機玩家名稱
@@ -1038,6 +1031,40 @@
             }
         }
         
+        // 更新對手資訊
+        function updateOpponentsInfo() {
+            const opponentsInfoEl = document.getElementById('opponentsInfo');
+            if (!currentGameState || !currentGameState.players) {
+                opponentsInfoEl.innerHTML = '等待其他玩家加入...';
+                return;
+            }
+            
+            const opponents = currentGameState.players.filter(p => p.id !== currentPlayerId);
+            if (opponents.length === 0) {
+                opponentsInfoEl.innerHTML = '等待其他玩家加入...';
+                return;
+            }
+            
+            let html = '';
+            opponents.forEach((opponent, index) => {
+                // 假設每個對手也有年齡和骰子計數（簡化版本，實際應該從伺服器同步）
+                const age = 18 + Math.floor((opponent.position || 0) / 8); // 基於位置估算年齡
+                const diceCount = (opponent.position || 0) % 5; // 基於位置估算骰子次數
+                
+                html += `
+                    <div style="background: rgba(255, 255, 255, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; line-height: 1.4;">
+                        <div style="color: #ffc107; font-weight: bold; margin-bottom: 8px;">👤 ${opponent.name}</div>
+                        <div><strong>💰 金錢:</strong> $${opponent.money || 1500}</div>
+                        <div><strong>📍 位置:</strong> ${getBoardSpaceName(opponent.position || 0)}</div>
+                        <div><strong>🎂 年齡:</strong> ${age}歲</div>
+                        <div><strong>🎲 骰子:</strong> ${diceCount}/5</div>
+                    </div>
+                `;
+            });
+            
+            opponentsInfoEl.innerHTML = html;
+        }
+        
         // 更新Debug資訊
         function updateDebugInfo() {
             // 連線狀態
@@ -1049,36 +1076,20 @@
                 
             document.getElementById('debugReconnects').textContent = reconnectCount;
             
-            // 遊戲狀態
+            // 我的狀態
             if (currentGameState) {
-                document.getElementById('debugGamePhase').textContent = 
-                    currentGameState.gamePhase || '等待';
-                    
-                document.getElementById('debugRoundNumber').textContent = 
-                    currentGameState.roundNumber || '-';
-                    
-                document.getElementById('debugPlayerCount').textContent = 
-                    currentGameState.players?.length || 0;
-                    
-                // 當前玩家
-                let currentPlayerName = '-';
-                if (currentGameState.players && currentGameState.currentPlayerIndex !== undefined) {
-                    const currentPlayer = currentGameState.players[currentGameState.currentPlayerIndex];
-                    currentPlayerName = currentPlayer?.name || '-';
-                }
-                document.getElementById('debugCurrentPlayer').textContent = currentPlayerName;
-                
-                // 我的回合
-                document.getElementById('debugMyTurn').textContent = isMyTurn ? '是' : '否';
-                
-                // 我的狀態
                 const myPlayer = currentGameState.players?.find(p => p.id === currentPlayerId);
                 if (myPlayer) {
                     document.getElementById('debugMyMoney').textContent = `$${myPlayer.money || 1500}`;
                     document.getElementById('debugMyPosition').textContent = getBoardSpaceName(myPlayer.position || 0);
+                    document.getElementById('debugMyAge').textContent = playerData.age || 18;
+                    document.getElementById('debugMyDiceCount').textContent = playerData.diceRollCount || 0;
                     document.getElementById('debugMyProperties').textContent = (myPlayer.properties || []).length;
                     document.getElementById('debugMySkills').textContent = (myPlayer.skillCards || []).length;
                 }
+                
+                // 更新對手資訊
+                updateOpponentsInfo();
             }
             
             // 我的玩家ID
@@ -1200,6 +1211,17 @@
             socket.on('dice_rolled', (data) => {
                 const result = data.diceResult;
                 addLog(`🎲 擲骰結果: ${result.dice1} + ${result.dice2} = ${result.total}`, 'game');
+                
+                // 如果是當前玩家擲骰，更新年齡系統
+                if (data.playerId === currentPlayerId) {
+                    playerData.diceRollCount++;
+                    if (playerData.diceRollCount >= 5) {
+                        playerData.age++;
+                        playerData.diceRollCount = 0;
+                        addLog(`🎂 年齡增長！您現在 ${playerData.age} 歲了`, 'info');
+                    }
+                    updateDebugInfo();
+                }
             });
             
             socket.on('player_moved', (data) => {
@@ -1242,12 +1264,6 @@
         function updateGameState(gameState) {
             currentGameState = gameState;
             if (gameState) {
-                gameStateDisplay.innerHTML = `
-                    <strong>階段:</strong> ${gameState.gamePhase || '未知'}<br>
-                    <strong>玩家數:</strong> ${gameState.players?.length || 0}<br>
-                    <strong>回合:</strong> ${gameState.roundNumber || 1}
-                `;
-                
                 // 更新當前玩家的狀態
                 if (gameState.players && currentPlayerId) {
                     const currentPlayer = gameState.players.find(p => p.id === currentPlayerId);
@@ -1257,6 +1273,7 @@
                 }
                 
                 updateDebugInfo();
+                updateOpponentsInfo();
             }
         }
         
