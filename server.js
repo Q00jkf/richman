@@ -107,7 +107,20 @@ class RichManRenderServer {
       // 創建房間
       socket.on('create_room', (data) => {
         if (!this.players.has(socket.id)) {
-          socket.emit('error', { message: '請先創建玩家' });
+          socket.emit('room_created', { 
+            success: false, 
+            message: '請先創建玩家' 
+          });
+          return;
+        }
+        
+        // 檢查玩家是否已經在其他房間中
+        const playerCurrentRoom = this.findPlayerRoom(socket.id);
+        if (playerCurrentRoom) {
+          socket.emit('room_created', { 
+            success: false, 
+            message: `您已經在房間「${playerCurrentRoom.name}」中，請先離開再創建新房間` 
+          });
           return;
         }
         
@@ -140,23 +153,54 @@ class RichManRenderServer {
       // 加入房間
       socket.on('join_room', (data) => {
         if (!this.players.has(socket.id)) {
-          socket.emit('error', { message: '請先創建玩家' });
+          socket.emit('room_joined', { 
+            success: false, 
+            message: '請先創建玩家' 
+          });
           return;
         }
         
         const room = this.rooms.get(data.roomId);
         if (!room) {
-          socket.emit('error', { message: '房間不存在' });
+          socket.emit('room_joined', { 
+            success: false, 
+            message: '房間不存在' 
+          });
+          return;
+        }
+        
+        // 檢查玩家是否已經在房間中
+        if (room.players.includes(socket.id)) {
+          socket.emit('room_joined', { 
+            success: false, 
+            message: '您已經在這個房間中了' 
+          });
           return;
         }
         
         if (room.players.length >= room.maxPlayers) {
-          socket.emit('error', { message: '房間已滿' });
+          socket.emit('room_joined', { 
+            success: false, 
+            message: '房間已滿' 
+          });
           return;
         }
         
         if (room.status !== 'waiting') {
-          socket.emit('error', { message: '遊戲已開始' });
+          socket.emit('room_joined', { 
+            success: false, 
+            message: '遊戲已開始，無法加入' 
+          });
+          return;
+        }
+        
+        // 檢查玩家是否已經在其他房間中
+        const playerCurrentRoom = this.findPlayerRoom(socket.id);
+        if (playerCurrentRoom) {
+          socket.emit('room_joined', { 
+            success: false, 
+            message: `您已經在房間「${playerCurrentRoom.name}」中，請先離開再加入新房間` 
+          });
           return;
         }
         
@@ -168,6 +212,53 @@ class RichManRenderServer {
           success: true,
           room: room,
           message: `成功加入房間 ${room.name}`
+        });
+        
+        // 通知房間內其他玩家
+        socket.to(data.roomId).emit('notification', {
+          message: `${this.players.get(socket.id)?.name} 加入了房間`
+        });
+        
+        this.broadcastRoomList();
+      });
+      
+      // 離開房間
+      socket.on('leave_room', () => {
+        const room = this.findPlayerRoom(socket.id);
+        if (!room) {
+          socket.emit('error', { message: '您不在任何房間中' });
+          return;
+        }
+        
+        // 從房間中移除玩家
+        room.players = room.players.filter(id => id !== socket.id);
+        socket.leave(room.id);
+        
+        const playerName = this.players.get(socket.id)?.name;
+        console.log(`🚪 玩家離開房間: ${playerName} ← ${room.name}`);
+        
+        // 通知房間內其他玩家
+        socket.to(room.id).emit('notification', {
+          message: `${playerName} 離開了房間`
+        });
+        
+        // 如果房間空了，刪除房間
+        if (room.players.length === 0) {
+          this.rooms.delete(room.id);
+          this.games.delete(room.id);
+          console.log(`🗑️ 空房間刪除: ${room.id}`);
+        } else if (room.host === socket.id) {
+          // 如果房主離開，轉移房主權限給第一個玩家
+          room.host = room.players[0];
+          console.log(`👑 房主轉移: ${this.players.get(room.host)?.name} 成為新房主`);
+          this.io.to(room.id).emit('notification', {
+            message: `${this.players.get(room.host)?.name} 成為新房主`
+          });
+        }
+        
+        socket.emit('room_left', {
+          success: true,
+          message: `已離開房間 ${room.name}`
         });
         
         this.broadcastRoomList();
@@ -404,6 +495,16 @@ class RichManRenderServer {
     for (const gameState of this.games.values()) {
       if (gameState.players && gameState.players.some(p => p.id === playerId)) {
         return gameState;
+      }
+    }
+    return null;
+  }
+  
+  // 尋找玩家所在的房間
+  findPlayerRoom(playerId) {
+    for (const room of this.rooms.values()) {
+      if (room.players.includes(playerId)) {
+        return room;
       }
     }
     return null;

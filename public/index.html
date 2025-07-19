@@ -817,7 +817,10 @@
                         </div>
                         <div class="input-group">
                             <input type="text" id="joinRoomId" placeholder="輸入房間ID加入">
-                            <button class="btn" onclick="joinRoom()">加入房間</button>
+                            <div class="input-row">
+                                <button class="btn" onclick="joinRoom()">加入房間</button>
+                                <button class="btn" onclick="leaveRoom()">離開房間</button>
+                            </div>
                         </div>
                     </div>
                     
@@ -1168,6 +1171,21 @@
                     displayRooms(data.rooms);
                 }
             });
+            
+            socket.on('room_left', (data) => {
+                if (data.success) {
+                    currentRoomId = null;
+                    addLog('🚪 ' + data.message, 'success');
+                    updateStats();
+                    getRooms();
+                } else {
+                    addLog('❌ 離開房間失敗: ' + data.message, 'error');
+                }
+            });
+            
+            socket.on('notification', (data) => {
+                addLog('📢 ' + data.message, 'info');
+            });
         }
         
         function updateGameState(gameState) {
@@ -1342,6 +1360,21 @@
             if (socket && socket.connected) {
                 socket.emit('get_game_state', {});
             }
+        }
+        
+        function leaveRoom() {
+            if (!currentRoomId) {
+                addLog('❌ 您不在任何房間中', 'error');
+                return;
+            }
+            
+            if (!socket || !socket.connected) {
+                addLog('❌ 請先連接到伺服器', 'error');
+                return;
+            }
+            
+            addLog('🚪 正在離開房間...', 'info');
+            socket.emit('leave_room');
         }
         
         // 頁面載入時初始化
