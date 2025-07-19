@@ -500,7 +500,7 @@
             background: rgba(255, 193, 7, 0.2);
         }
         
-        /* 響應式設計 */
+        /* 平板響應式設計 */
         @media (max-width: 1200px) {
             .game-container {
                 grid-template-areas: 
@@ -509,75 +509,248 @@
                     "main"
                     "info"
                     "logs";
-                grid-template-rows: 60px 300px 1fr 200px 150px;
+                grid-template-rows: 60px 250px auto 180px 120px;
                 grid-template-columns: 1fr;
-                padding: 10px;
-                gap: 10px;
+                padding: 8px;
+                gap: 8px;
+                height: auto;
+                min-height: 100vh;
             }
             
             .sidebar {
-                max-height: 300px;
+                max-height: 250px;
                 overflow-y: auto;
             }
             
             .info-panel {
-                max-height: 200px;
+                max-height: 180px;
                 overflow-y: auto;
             }
             
             .main-game {
                 flex-direction: column;
                 gap: 15px;
+                min-height: auto;
             }
             
             .status-panel {
                 flex: 1;
+                min-height: 300px;
             }
             
             .action-panel {
                 flex: none;
+                flex-direction: row;
+                gap: 10px;
             }
             
             .game-button {
                 padding: 15px;
                 font-size: 14px;
+                flex: 1;
             }
             
-            /* 手機版標籤頁調整 */
             .tab-button {
                 font-size: 12px;
-                padding: 10px 12px;
+                padding: 8px 12px;
             }
             
             .tab-content {
-                height: calc(100% - 42px);
+                height: calc(100% - 36px);
+            }
+            
+            .logs {
+                max-height: 120px;
+            }
+            
+            .log-content {
+                height: 80px;
+            }
+        }
+        
+        /* 手機響應式設計 */
+        @media (max-width: 768px) {
+            body {
+                overflow: auto;
+            }
+            
+            .game-container {
+                grid-template-areas: 
+                    "header"
+                    "sidebar"
+                    "main"
+                    "info"
+                    "logs";
+                grid-template-rows: auto auto auto auto auto;
+                grid-template-columns: 1fr;
+                padding: 5px;
+                gap: 8px;
+                height: auto;
+                min-height: 100vh;
+            }
+            
+            .header {
+                padding: 8px 12px;
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+            
+            .header-left h2 {
+                font-size: 16px;
+                margin: 0;
+            }
+            
+            .header-right {
+                flex-wrap: wrap;
+                gap: 6px;
+                justify-content: center;
+            }
+            
+            .id-display {
+                font-size: 10px;
+                padding: 3px 6px;
+            }
+            
+            .sidebar {
+                max-height: 280px;
+                overflow-y: auto;
+            }
+            
+            .tab-content {
+                padding: 12px;
+                height: calc(100% - 36px);
+            }
+            
+            .main-game {
+                flex-direction: column;
+                gap: 12px;
+                padding: 15px;
+                min-height: auto;
+            }
+            
+            .status-panel {
+                min-height: 250px;
+                padding: 15px;
+            }
+            
+            .status-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                margin-bottom: 15px;
+            }
+            
+            .money-display {
+                grid-column: 1 / -1;
+            }
+            
+            .properties-list {
+                max-height: 80px;
+                padding: 10px;
+            }
+            
+            .action-panel {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .game-button {
+                padding: 12px;
+                font-size: 14px;
+                width: 100%;
+            }
+            
+            .info-panel {
+                max-height: 200px;
+                overflow-y: auto;
+                padding: 15px;
+            }
+            
+            .info-section {
+                margin-bottom: 15px;
+            }
+            
+            .rooms-list {
+                max-height: 120px;
+                padding: 10px;
+            }
+            
+            .logs {
+                max-height: 150px;
+                padding: 10px;
+            }
+            
+            .log-content {
+                height: 100px;
+                font-size: 11px;
+            }
+            
+            .control-section {
+                margin-bottom: 15px;
+            }
+            
+            .input-group {
+                gap: 6px;
+                margin-bottom: 10px;
+            }
+            
+            .input-row {
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+            
+            .btn {
+                padding: 8px 12px;
+                font-size: 12px;
+                flex: 1;
+                min-width: 80px;
             }
         }
         
         /* 超小螢幕優化 */
         @media (max-width: 480px) {
-            .header {
-                padding: 10px 15px;
-            }
-            
             .header-right {
-                flex-wrap: wrap;
-                gap: 8px;
+                grid-template-columns: 1fr 1fr;
+                gap: 4px;
             }
             
             .id-display {
-                font-size: 11px;
-                padding: 4px 8px;
+                font-size: 9px;
+                padding: 2px 4px;
             }
             
             .status-grid {
                 grid-template-columns: 1fr;
-                gap: 10px;
+                gap: 6px;
             }
             
             .game-button {
-                padding: 12px;
+                padding: 10px;
                 font-size: 13px;
+            }
+            
+            .tab-button {
+                font-size: 11px;
+                padding: 6px 8px;
+            }
+            
+            .btn {
+                font-size: 11px;
+                padding: 6px 10px;
+            }
+            
+            .input-row {
+                flex-direction: column;
+            }
+            
+            .room-item {
+                padding: 8px;
+                font-size: 12px;
+            }
+            
+            .log-content {
+                font-size: 10px;
+                height: 80px;
             }
         }
     </style>
@@ -934,8 +1107,23 @@
                 if (data.success) {
                     currentRoomId = data.room.id;
                     addLog(`🏠 房間創建成功: ${data.room.name}`, 'success');
+                    addLog(`🔑 房間ID: ${data.room.id}`, 'info');
                     updateStats();
                     getRooms();
+                } else {
+                    addLog(`❌ 房間創建失敗: ${data.message}`, 'error');
+                }
+            });
+            
+            socket.on('room_joined', (data) => {
+                if (data.success) {
+                    currentRoomId = data.room.id;
+                    addLog(`🚪 成功加入房間: ${data.room.name}`, 'success');
+                    addLog(`👥 房間玩家: ${data.room.players.length}/${data.room.maxPlayers}`, 'info');
+                    updateStats();
+                    getRooms();
+                } else {
+                    addLog(`❌ 加入房間失敗: ${data.message}`, 'error');
                 }
             });
             
@@ -1000,14 +1188,27 @@
                 return;
             }
             
-            roomsList.innerHTML = rooms.map(room => `
-                <div class="room-item">
-                    <div class="room-name">${room.name}</div>
-                    <div class="room-info">
-                        玩家: ${room.playerCount}/${room.maxPlayers} | 狀態: ${room.status}
+            roomsList.innerHTML = rooms.map(room => {
+                const canJoin = room.status === 'waiting' && room.playerCount < room.maxPlayers;
+                const buttonStyle = canJoin ? '' : 'opacity: 0.5; cursor: not-allowed;';
+                const buttonText = canJoin ? '加入' : '無法加入';
+                
+                return `
+                    <div class="room-item">
+                        <div class="room-name">${room.name}</div>
+                        <div class="room-info">
+                            玩家: ${room.playerCount}/${room.maxPlayers} | 狀態: ${room.status}
+                            ${canJoin ? 
+                                `<button class="btn" onclick="joinRoomById('${room.id}')" style="float: right; padding: 4px 8px; font-size: 11px; margin-left: 8px;">加入</button>` : 
+                                `<span style="float: right; padding: 4px 8px; font-size: 11px; ${buttonStyle}">${buttonText}</span>`
+                            }
+                        </div>
+                        <div style="font-size: 10px; opacity: 0.6; margin-top: 4px;">
+                            房主: ${room.host} | ID: ${room.id.substring(0, 8)}...
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
         // 遊戲操作函數
@@ -1109,7 +1310,32 @@
         }
         
         function joinRoom() {
-            addLog('🚪 加入房間功能開發中...', 'info');
+            const roomId = document.getElementById('joinRoomId').value;
+            
+            if (!roomId || !roomId.trim()) {
+                addLog('❌ 請輸入房間ID', 'error');
+                return;
+            }
+            
+            joinRoomById(roomId.trim());
+        }
+        
+        function joinRoomById(roomId) {
+            if (!currentPlayerId) {
+                addLog('❌ 請先創建玩家', 'error');
+                return;
+            }
+            
+            if (!socket || !socket.connected) {
+                addLog('❌ 請先連接到伺服器', 'error');
+                return;
+            }
+            
+            addLog(`🚪 正在加入房間: ${roomId.substring(0, 12)}...`, 'info');
+            
+            socket.emit('join_room', {
+                roomId: roomId
+            });
         }
         
         function getGameState() {
