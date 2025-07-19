@@ -750,6 +750,10 @@
                             <button class="btn" onclick="getGameState()">獲取狀態</button>
                             <button class="btn" onclick="clearLog()">清除日誌</button>
                         </div>
+                        <div class="input-row" style="margin-top: 10px;">
+                            <button class="btn btn-primary" onclick="testConnection()">測試連接</button>
+                            <button class="btn" onclick="reconnect()">重新連接</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -870,6 +874,15 @@
 
     <!-- Socket.IO 客戶端庫 -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <script>
+        // 檢查Socket.IO是否正確載入
+        if (typeof io === 'undefined') {
+            alert('Socket.IO 載入失敗！請檢查網路連接。');
+        } else {
+            console.log('✅ Socket.IO loaded:', io.version);
+        }
+    </script>
     
     <script>
         // 生成隨機玩家名稱
@@ -1132,6 +1145,14 @@
             const serverHost = getServerHost();
             addLog(`📡 嘗試連接到: ${serverHost}`, 'info');
             
+            // 檢查Socket.IO是否載入
+            if (typeof io === 'undefined') {
+                addLog('❌ Socket.IO 未載入！', 'error');
+                return;
+            }
+            
+            addLog(`✅ Socket.IO 版本: ${io.version || 'unknown'}`, 'info');
+            
             socket = io(serverHost, {
                 transports: ['websocket', 'polling'],
                 timeout: 10000,
@@ -1139,6 +1160,8 @@
                 upgrade: true,
                 rememberUpgrade: false
             });
+            
+            addLog('📊 Socket實例已創建', 'info');
             
             // 連接診斷
             let connectionTimeout = setTimeout(() => {
@@ -1154,58 +1177,38 @@
         
         // 智能檢測伺服器地址
         function getServerHost() {
+            const protocol = window.location.protocol;
             const hostname = window.location.hostname;
             
-            // 如果是file://協議，需要手動輸入IP
-            if (window.location.protocol === 'file:') {
+            console.log('🔍 檢測環境:', { protocol, hostname });
+            
+            // 如果是file://協議 (本地檔案)
+            if (protocol === 'file:') {
+                console.log('📁 檢測到file://協議');
+                
                 // 檢查是否有儲存的IP地址
                 const savedIP = localStorage.getItem('richman_server_ip');
+                console.log('💾 儲存的IP:', savedIP);
                 
-                if (savedIP) {
-                    const useStored = confirm(`使用上次的伺服器地址 ${savedIP}:5000 嗎？\n點選「確定」使用，「取消」重新輸入`);
-                    if (useStored) {
-                        return `http://${savedIP}:5000`;
-                    }
+                // 如果沒有保存的IP，或者是第一次訪問，直接使用localhost (電腦版)
+                if (!savedIP) {
+                    console.log('🖥️ 電腦版，使用localhost');
+                    return 'http://localhost:5000';
                 }
                 
-                // 提示用戶輸入IP
-                const instructions = `手機連接說明：
-1. 確保手機和電腦在同一個WiFi網路
-2. 在Windows電腦上：
-   - 按Win+R，輸入cmd，按Enter
-   - 輸入 ipconfig 並按Enter
-   - 找到「無線區域網路介面卡 Wi-Fi」下的「IPv4 地址」
-   - 通常是 192.168.x.x 或 10.x.x.x
-3. 輸入該IP地址
-
-常見IP範圍：
-- 192.168.1.x (最常見)
-- 192.168.0.x
-- 10.0.0.x`;
-                
-                alert(instructions);
-                
-                const computerIP = prompt('請輸入電腦的WiFi IP地址:', savedIP || '192.168.1.');
-                
-                if (computerIP && computerIP.trim() && computerIP !== 'localhost') {
-                    const ip = computerIP.trim();
-                    
-                    // 簡單的IP格式驗證
-                    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
-                    if (!ipPattern.test(ip)) {
-                        alert('IP地址格式不正確，請輸入正確的IP地址 (例如: 192.168.1.100)');
-                        return getServerHost(); // 重新輸入
-                    }
-                    
-                    // 儲存IP地址供下次使用
-                    localStorage.setItem('richman_server_ip', ip);
-                    return `http://${ip}:5000`;
+                // 如果有保存的IP，詢問是否使用
+                const useStored = confirm(`使用上次的伺服器地址 ${savedIP}:5000 嗎？\n確定=使用儲存的IP\n取消=使用localhost(電腦版)`);
+                if (useStored) {
+                    console.log('✅ 使用儲存的IP:', savedIP);
+                    return `http://${savedIP}:5000`;
+                } else {
+                    console.log('🖥️ 選擇使用localhost');
+                    return 'http://localhost:5000';
                 }
-                
-                return 'http://localhost:5000';
             }
             
-            // 如果是通過網頁伺服器訪問，使用相同的host
+            // 如果是http://協議 (網頁伺服器)
+            console.log('🌐 網頁伺服器模式');
             return `http://${hostname}:5000`;
         }
             
@@ -1213,9 +1216,18 @@
             socket.on('connect', () => {
                 clearTimeout(connectionTimeout);
                 addLog('✅ WebSocket 連接成功！', 'success');
+                addLog(`🔗 Socket ID: ${socket.id}`, 'success');
                 updateConnectionStatus('已連接', 'connected');
                 updateStats();
                 getRooms();
+                
+                // 自動創建玩家和房間進行測試
+                setTimeout(() => {
+                    if (!currentPlayerId) {
+                        addLog('🤖 自動創建測試玩家...', 'info');
+                        createPlayer();
+                    }
+                }, 1000);
             });
             
             socket.on('disconnect', (reason) => {
@@ -1226,17 +1238,46 @@
             
             socket.on('connect_error', (error) => {
                 clearTimeout(connectionTimeout);
-                addLog(`❌ 連接錯誤: ${error.message || error}`, 'error');
+                addLog(`❌ 連接錯誤: ${error.message || error.type || error}`, 'error');
                 addLog(`🔧 伺服器地址: ${serverHost}`, 'error');
+                addLog(`🔍 錯誤詳情: ${JSON.stringify(error)}`, 'error');
                 updateConnectionStatus('連接失敗', 'error');
                 
                 // 提供重試選項
                 setTimeout(() => {
-                    if (confirm('連接失敗！是否要重新輸入伺服器IP地址？')) {
-                        localStorage.removeItem('richman_server_ip');
-                        location.reload();
+                    if (window.location.protocol === 'file:') {
+                        if (confirm('連接失敗！是否要重新輸入伺服器IP地址？')) {
+                            localStorage.removeItem('richman_server_ip');
+                            location.reload();
+                        }
+                    } else {
+                        addLog('🔄 將在5秒後自動重試...', 'info');
+                        setTimeout(() => {
+                            reconnect();
+                        }, 5000);
                     }
                 }, 2000);
+            });
+            
+            // 添加更多連接狀態監控
+            socket.on('connecting', () => {
+                addLog('🔄 正在建立連接...', 'info');
+            });
+            
+            socket.on('reconnect', (attemptNumber) => {
+                addLog(`🔄 重新連接成功 (嘗試 ${attemptNumber})`, 'success');
+            });
+            
+            socket.on('reconnecting', (attemptNumber) => {
+                addLog(`🔄 重新連接中... (嘗試 ${attemptNumber})`, 'info');
+            });
+            
+            socket.on('reconnect_error', (error) => {
+                addLog(`❌ 重新連接失敗: ${error.message || error}`, 'error');
+            });
+            
+            socket.on('reconnect_failed', () => {
+                addLog('❌ 重新連接失敗，已放棄', 'error');
             });
             
             // 玩家事件
@@ -1367,6 +1408,15 @@
             
             socket.on('notification', (data) => {
                 addLog(`📢 ${data.message}`, 'info');
+            });
+            
+            // Ping/Pong 測試
+            socket.on('pong', (data) => {
+                const now = Date.now();
+                const sentTime = parseInt(data.timestamp) || now;
+                const latency = now - sentTime;
+                addLog(`🏓 Pong收到！延遲: ${latency}ms`, 'success');
+                addLog(`📊 伺服器時間: ${new Date(data.serverTime).toLocaleTimeString()}`, 'info');
             });
             
             socket.on('game_action_result', (data) => {
@@ -1502,6 +1552,43 @@
             socket.emit('get_game_state', {});
         }
         
+        // 測試連接功能
+        function testConnection() {
+            addLog('🔍 測試連接狀態...', 'info');
+            
+            if (!socket) {
+                addLog('❌ Socket未初始化', 'error');
+                return;
+            }
+            
+            const connected = socket.connected;
+            addLog(`📡 Socket連接狀態: ${connected ? '已連接' : '未連接'}`, connected ? 'success' : 'error');
+            
+            if (connected) {
+                addLog(`🆔 Socket ID: ${socket.id}`, 'info');
+                addLog('✅ 嘗試發送測試訊息...', 'info');
+                const pingTime = Date.now();
+                addLog(`📤 發送Ping: ${pingTime}`, 'info');
+                socket.emit('ping', { timestamp: pingTime });
+            } else {
+                addLog('⚠️ 嘗試重新連接...', 'info');
+                reconnect();
+            }
+        }
+        
+        // 重新連接功能
+        function reconnect() {
+            addLog('🔄 重新連接中...', 'info');
+            
+            if (socket) {
+                socket.disconnect();
+            }
+            
+            setTimeout(() => {
+                initSocket();
+            }, 1000);
+        }
+        
         // 點擊模態框外部關閉
         document.getElementById('skillModal').addEventListener('click', function(e) {
             if (e.target === this) {
@@ -1509,9 +1596,63 @@
             }
         });
         
+        // 緊急調試模式 - 強制使用localhost
+        function forceLocalhostConnection() {
+            localStorage.removeItem('richman_server_ip');
+            addLog('🚨 強制使用localhost連接模式', 'info');
+            
+            if (socket) {
+                socket.disconnect();
+            }
+            
+            socket = io('http://localhost:5000', {
+                transports: ['polling', 'websocket'], // 先嘗試polling
+                timeout: 15000,
+                forceNew: true
+            });
+            
+            // 重新設置所有事件監聽器
+            setupSocketListeners();
+        }
+        
+        // 設置Socket事件監聽器
+        function setupSocketListeners() {
+            socket.on('connect', () => {
+                addLog('✅ 強制localhost連接成功！', 'success');
+                updateConnectionStatus('已連接', 'connected');
+                updateStats();
+            });
+            
+            socket.on('connect_error', (error) => {
+                addLog(`❌ localhost連接失敗: ${error.message || error}`, 'error');
+            });
+        }
+        
         // 頁面載入時初始化
         window.onload = function() {
-            initSocket();
+            // 清除任何舊的連接設定
+            addLog('🔧 初始化系統...', 'info');
+            addLog(`🌐 協議: ${window.location.protocol}`, 'info');
+            addLog(`🖥️ 主機: ${window.location.hostname || '本地檔案'}`, 'info');
+            
+            // 電腦版直接使用localhost
+            if (window.location.protocol === 'file:') {
+                addLog('💡 檢測到電腦版，將使用localhost', 'info');
+                setTimeout(() => {
+                    forceLocalhostConnection();
+                }, 1000);
+            } else {
+                initSocket();
+            }
+            
+            // 每5秒更新一次連接狀態顯示
+            setInterval(() => {
+                if (socket) {
+                    const status = socket.connected ? '已連接' : '連接中斷';
+                    updateConnectionStatus(status, socket.connected ? 'connected' : 'error');
+                    updateDebugInfo();
+                }
+            }, 5000);
         };
         
         // 頁面關閉時斷開連接

@@ -1,0 +1,15 @@
+# Render 部署配置文件
+services:
+  - type: web
+    name: richman-game
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+    autoDeploy: true
+    branch: richman-render

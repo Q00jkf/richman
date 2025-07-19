@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RichMan 簡單測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.connecting {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 RichMan 簡單連接測試</h1>
+        
+        <div id="status" class="status connecting">
+            🔌 準備連接...
+        </div>
+        
+        <div>
+            <button onclick="testBasicFunction()">測試基本功能</button>
+            <button onclick="connectToServer()">連接伺服器</button>
+            <button onclick="findWindowsIP()">查找Windows IP</button>
+            <button onclick="scanAllIPs()">掃描所有IP</button>
+            <button onclick="connectWithIP()">使用IP連接</button>
+            <button onclick="testConnection()">測試連接</button>
+            <button onclick="clearLog()">清除日誌</button>
+        </div>
+        
+        <div style="margin: 10px 0; padding: 10px; background: #e9ecef; border-radius: 5px;">
+            <strong>🔧 網路配置檢測：</strong><br>
+            • 電腦主要IP：<span style="color: red; font-weight: bold;">192.168.117.202</span><br>
+            • 電腦WSL IP：<span style="color: blue;">172.28.96.1</span><br>
+            • 網路類型：<span style="color: orange;">手機熱點分享給電腦</span><br>
+            • 建議IP：<span style="color: green;">192.168.117.202</span>
+        </div>
+        
+        <div style="margin: 10px 0; padding: 10px; background: #fff3cd; border-radius: 5px;">
+            <strong>⚠️ 特殊網路配置說明：</strong><br>
+            由於電腦使用手機分享的網路，需要特殊設定。請嘗試以下方法：<br>
+            1. <strong>電腦版</strong>：直接使用localhost<br>
+            2. <strong>手機版</strong>：需要找到Windows主機的實際IP
+        </div>
+        
+        <div id="log" class="log">
+            <div>[系統] 頁面載入完成</div>
+        </div>
+    </div>
+
+    <!-- Socket.IO 客戶端 -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <script>
+        let socket = null;
+        let logEl = document.getElementById('log');
+        let statusEl = document.getElementById('status');
+        
+        // 基本日誌功能
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logEl.appendChild(logEntry);
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+        
+        // 更新狀態
+        function updateStatus(message, type) {
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        // 清除日誌
+        function clearLog() {
+            logEl.innerHTML = '<div>[系統] 日誌已清除</div>';
+        }
+        
+        // 測試基本功能
+        function testBasicFunction() {
+            addLog('✅ 基本功能測試 - 按鈕點擊正常！');
+            addLog('📊 Window location: ' + window.location.href);
+            addLog('🌐 Protocol: ' + window.location.protocol);
+            
+            if (typeof io !== 'undefined') {
+                addLog('✅ Socket.IO 已載入，版本: ' + (io.version || 'unknown'));
+            } else {
+                addLog('❌ Socket.IO 未載入！');
+            }
+        }
+        
+        // 連接到伺服器
+        function connectToServer() {
+            addLog('🔌 開始連接到伺服器...');
+            
+            if (typeof io === 'undefined') {
+                addLog('❌ Socket.IO 未載入，無法連接');
+                updateStatus('❌ Socket.IO 載入失敗', 'error');
+                return;
+            }
+            
+            // 智能檢測伺服器地址
+            let serverURL = 'http://localhost:5000';
+            
+            // 如果是手機訪問，需要輸入電腦IP
+            if (window.location.protocol === 'file:') {
+                const savedIP = localStorage.getItem('richman_server_ip');
+                
+                if (savedIP) {
+                    const useStored = confirm(`使用儲存的IP: ${savedIP}:5000?\n確定=使用\n取消=重新輸入`);
+                    if (useStored) {
+                        serverURL = `http://${savedIP}:5000`;
+                    } else {
+                        const newIP = prompt('請輸入電腦的IP地址:', savedIP);
+                        if (newIP && newIP.trim()) {
+                            localStorage.setItem('richman_server_ip', newIP.trim());
+                            serverURL = `http://${newIP.trim()}:5000`;
+                        }
+                    }
+                } else {
+                    // 第一次使用，詢問是否需要輸入IP
+                    const needIP = confirm('檢測到本地文件訪問。\n如果在手機上，需要輸入電腦IP。\n如果在電腦上，直接使用localhost。\n\n點確定輸入電腦IP，取消使用localhost');
+                    
+                    if (needIP) {
+                        const computerIP = prompt('請輸入電腦的WiFi IP地址\n(在電腦cmd執行ipconfig查看):', '192.168.1.');
+                        if (computerIP && computerIP.trim()) {
+                            localStorage.setItem('richman_server_ip', computerIP.trim());
+                            serverURL = `http://${computerIP.trim()}:5000`;
+                        }
+                    }
+                }
+            }
+            
+            addLog('📡 嘗試連接到: ' + serverURL);
+            
+            try {
+                // 斷開舊連接
+                if (socket) {
+                    socket.disconnect();
+                }
+                
+                socket = io(serverURL, {
+                    transports: ['polling', 'websocket'],
+                    timeout: 10000,
+                    forceNew: true
+                });
+                
+                setupSocketEvents();
+                updateStatus('🟡 連接中...', 'connecting');
+                
+            } catch (error) {
+                addLog('❌ 創建Socket時發生錯誤: ' + error.message);
+                updateStatus('❌ 連接失敗', 'error');
+            }
+        }
+        
+        // 掃描所有可能的IP (手機熱點專用)
+        function scanAllIPs() {
+            addLog('🔍 開始掃描手機熱點網路中的所有可能IP...', 'info');
+            
+            const hotspotIPs = [
+                '192.168.117.202', // 電腦實際檢測到的IP (優先測試)
+                '172.28.96.1',     // WSL網路介面IP
+                '192.168.137.1',   // 手機熱點主機
+                '192.168.137.2',   // 電腦可能的IP
+                '192.168.43.1',    // Android熱點
+                '192.168.43.2',    // Android熱點客戶端
+                '172.20.10.1',     // iPhone熱點
+            ];
+            
+            addLog('📱 手機熱點網路掃描列表:', 'info');
+            hotspotIPs.forEach((ip, index) => {
+                addLog(`${index + 1}. ${ip}`, 'info');
+            });
+            
+            if (confirm('開始自動掃描？這會依序測試所有IP地址')) {
+                scanIPsSequentially(hotspotIPs, 0);
+            }
+        }
+        
+        // 依序掃描IP地址
+        function scanIPsSequentially(ips, index) {
+            if (index >= ips.length) {
+                addLog('❌ 所有IP掃描完成，未找到可用的伺服器', 'error');
+                addLog('💡 建議檢查:', 'info');
+                addLog('1. 確認電腦伺服器正在運行', 'info');
+                addLog('2. 確認防火牆設定', 'info');
+                addLog('3. 嘗試在電腦端執行 find-ip.bat 查看實際IP', 'info');
+                return;
+            }
+            
+            const ip = ips[index];
+            addLog(`🔍 正在測試 ${ip}...`, 'info');
+            
+            // 創建測試連接
+            const testSocket = io(`http://${ip}:5000`, {
+                transports: ['polling'],
+                timeout: 5000,
+                forceNew: true
+            });
+            
+            testSocket.on('connect', () => {
+                addLog(`✅ 找到可用IP: ${ip}`, 'success');
+                testSocket.disconnect();
+                
+                // 使用找到的IP進行正式連接
+                if (confirm(`發現可用伺服器 ${ip}:5000，要連接嗎？`)) {
+                    localStorage.setItem('richman_server_ip', ip);
+                    connectWithSpecificIP(ip);
+                }
+            });
+            
+            testSocket.on('connect_error', () => {
+                addLog(`❌ ${ip} 無法連接`, 'error');
+                testSocket.disconnect();
+                
+                // 測試下一個IP
+                setTimeout(() => {
+                    scanIPsSequentially(ips, index + 1);
+                }, 1000);
+            });
+        }
+        
+        // 查找Windows主機IP (簡化版)
+        function findWindowsIP() {
+            addLog('🔍 手機熱點網路配置說明...', 'info');
+            addLog('📱 你的手機開啟熱點給電腦使用', 'info');
+            addLog('🖥️ 在這種配置下：', 'info');
+            addLog('• 手機IP通常是: 192.168.137.1', 'info');
+            addLog('• 電腦IP通常是: 192.168.137.2 或其他', 'info');
+            addLog('• 伺服器運行在電腦上，所以要連接電腦的IP', 'info');
+            
+            addLog('💡 建議執行「掃描所有IP」來自動查找', 'info');
+        }
+        
+        // 使用特定IP連接
+        function connectWithSpecificIP(ip) {
+            const serverURL = `http://${ip}:5000`;
+            addLog(`🔗 自動測試連接到: ${serverURL}`, 'info');
+            
+            try {
+                if (socket) {
+                    socket.disconnect();
+                }
+                
+                socket = io(serverURL, {
+                    transports: ['polling', 'websocket'],
+                    timeout: 8000,  // 較短的超時時間用於快速測試
+                    forceNew: true
+                });
+                
+                setupSocketEvents();
+                updateStatus('🟡 測試連接中...', 'connecting');
+                
+                // 設置測試超時
+                setTimeout(() => {
+                    if (!socket.connected) {
+                        addLog(`❌ ${ip} 連接失敗，請嘗試其他IP`, 'error');
+                        socket.disconnect();
+                    }
+                }, 8000);
+                
+            } catch (error) {
+                addLog('❌ 測試連接時發生錯誤: ' + error.message, 'error');
+            }
+        }
+        
+        // 使用IP連接 (手機版)
+        function connectWithIP() {
+            const savedIP = localStorage.getItem('richman_server_ip');
+            const defaultIP = savedIP || '192.168.117.202';
+            
+            const ip = prompt(`請輸入Windows主機IP地址:
+            
+檢測到的IP:
+• 192.168.117.202 (主要IP，建議優先測試)
+• 172.28.96.1 (WSL IP)
+
+其他常見IP:
+• 192.168.137.1 (Windows分享)
+• 192.168.43.1 (Android分享)`, defaultIP);
+            
+            if (!ip || !ip.trim()) {
+                addLog('❌ 未輸入IP地址');
+                return;
+            }
+            
+            const serverURL = `http://${ip.trim()}:5000`;
+            addLog('📱 手機版連接模式');
+            addLog('📡 嘗試連接到: ' + serverURL);
+            
+            // 儲存IP供下次使用
+            localStorage.setItem('richman_server_ip', ip.trim());
+            
+            try {
+                // 斷開舊連接
+                if (socket) {
+                    socket.disconnect();
+                }
+                
+                socket = io(serverURL, {
+                    transports: ['polling', 'websocket'],
+                    timeout: 15000,
+                    forceNew: true
+                });
+                
+                setupSocketEvents();
+                updateStatus('🟡 連接中...', 'connecting');
+                
+            } catch (error) {
+                addLog('❌ 創建Socket時發生錯誤: ' + error.message);
+                updateStatus('❌ 連接失敗', 'error');
+            }
+        }
+        
+        // 設置Socket事件
+        function setupSocketEvents() {
+            socket.on('connect', () => {
+                addLog('✅ 連接成功！Socket ID: ' + socket.id);
+                updateStatus('🟢 已連接', 'connected');
+            });
+            
+            socket.on('connect_error', (error) => {
+                addLog('❌ 連接錯誤: ' + (error.message || error.type || error));
+                addLog('🔧 錯誤詳情: ' + JSON.stringify(error));
+                updateStatus('🔴 連接失敗', 'error');
+                
+                // 提供診斷資訊
+                setTimeout(() => {
+                    addLog('📋 手機連接診斷:');
+                    addLog('1. 確保手機和電腦在同一WiFi網路');
+                    addLog('2. 確保Windows防火牆允許5000端口');
+                    addLog('3. 確保伺服器正在運行');
+                    addLog('4. 嘗試不同的IP地址');
+                }, 1000);
+            });
+            
+            socket.on('disconnect', (reason) => {
+                addLog('❌ 連接中斷: ' + reason);
+                updateStatus('🟡 連接中斷', 'error');
+            });
+            
+            // Ping/Pong測試
+            socket.on('pong', (data) => {
+                addLog('🏓 收到Pong回應！延遲: ' + (Date.now() - data.timestamp) + 'ms');
+            });
+        }
+        
+        // 測試連接
+        function testConnection() {
+            if (!socket) {
+                addLog('❌ 未建立連接，請先連接伺服器');
+                return;
+            }
+            
+            if (socket.connected) {
+                addLog('🏓 發送Ping測試...');
+                socket.emit('ping', { timestamp: Date.now() });
+            } else {
+                addLog('❌ Socket未連接');
+            }
+        }
+        
+        // 頁面載入完成
+        window.onload = function() {
+            addLog('🚀 頁面初始化完成');
+            testBasicFunction();
+        };
+        
+        // 錯誤處理
+        window.onerror = function(msg, url, line, col, error) {
+            addLog('❌ JavaScript錯誤: ' + msg + ' (行:' + line + ')');
+            return false;
+        };
+    </script>
+</body>
+</html>
