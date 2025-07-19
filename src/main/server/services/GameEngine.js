@@ -186,8 +186,25 @@ class GameEngine {
     this.gameState.currentPlayerIndex = 0;
     this.gameState.gamePhase = GamePhase.STARTING;
     this.gameState.roundNumber = 1;
+    this.gameState.startTime = new Date();
 
     this.updateGameState();
+
+    // 發射遊戲開始事件
+    this.emit(GameEventType.GAME_STARTED, {
+      gameId: this.gameId,
+      roomId: this.roomId,
+      playerCount: this.gameState.players.length,
+      players: this.gameState.players.map(p => ({
+        id: p.id,
+        name: p.name,
+        position: p.position
+      })),
+      startTime: this.gameState.startTime,
+      hostPlayerId: hostPlayerId
+    });
+
+    console.log(`🚀 Game ${this.gameId} started with ${this.gameState.players.length} players`);
 
     // 開始第一個玩家的回合
     setTimeout(() => {

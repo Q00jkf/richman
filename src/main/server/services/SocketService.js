@@ -15,7 +15,106 @@ class SocketService {
     this.activeConnections = new Map(); // socketId -> connectionInfo
     this.playerSockets = new Map(); // playerId -> socketId
     
+    // 設置 GameManager 事件監聽器
+    this.setupGameManagerListeners();
+    
     console.log('📡 SocketService initialized');
+  }
+
+  /**
+   * 設置 GameManager 事件監聽器
+   */
+  setupGameManagerListeners() {
+    const { GameEventType } = require('../../shared/constants/GameConstants');
+    
+    // 遊戲開始事件
+    this.gameManager.on(GameEventType.GAME_STARTED, (data) => {
+      console.log('🎮 Broadcasting game started event:', data);
+      this.io.to(data.roomId).emit('game_started', {
+        success: true,
+        gameId: data.gameId,
+        gameState: this.gameManager.getGameState(data.gameId),
+        players: data.players,
+        startTime: data.startTime
+      });
+    });
+
+    // 回合開始事件
+    this.gameManager.on(GameEventType.TURN_STARTED, (data) => {
+      console.log('🎯 Broadcasting turn started event:', data);
+      this.io.to(data.roomId || this.getRoomIdByGameId(data.gameId)).emit('turn_started', {
+        playerId: data.playerId,
+        playerName: data.playerName,
+        roundNumber: data.roundNumber,
+        gameId: data.gameId
+      });
+    });
+
+    // 擲骰子事件
+    this.gameManager.on(GameEventType.DICE_ROLLED, (data) => {
+      console.log('🎲 Broadcasting dice rolled event:', data);
+      this.io.to(data.roomId || this.getRoomIdByGameId(data.gameId)).emit('dice_rolled', {
+        playerId: data.playerId,
+        diceResult: data.diceResult,
+        gameId: data.gameId
+      });
+    });
+
+    // 玩家移動事件
+    this.gameManager.on(GameEventType.PLAYER_MOVED, (data) => {
+      console.log('🚶 Broadcasting player moved event:', data);
+      this.io.to(data.roomId || this.getRoomIdByGameId(data.gameId)).emit('player_moved', {
+        playerId: data.playerId,
+        oldPosition: data.oldPosition,
+        newPosition: data.newPosition,
+        gameId: data.gameId
+      });
+    });
+
+    // 地產購買事件
+    this.gameManager.on(GameEventType.PROPERTY_BOUGHT, (data) => {
+      console.log('🏠 Broadcasting property bought event:', data);
+      this.io.to(data.roomId || this.getRoomIdByGameId(data.gameId)).emit('property_bought', {
+        playerId: data.playerId,
+        propertyId: data.propertyId,
+        price: data.price,
+        gameId: data.gameId
+      });
+    });
+
+    // 租金支付事件
+    this.gameManager.on(GameEventType.RENT_PAID, (data) => {
+      console.log('💰 Broadcasting rent paid event:', data);
+      this.io.to(data.roomId || this.getRoomIdByGameId(data.gameId)).emit('rent_paid', {
+        payerId: data.payerId,
+        receiverId: data.receiverId,
+        amount: data.amount,
+        propertyId: data.propertyId,
+        gameId: data.gameId
+      });
+    });
+
+    // 遊戲結束事件
+    this.gameManager.on(GameEventType.GAME_ENDED, (data) => {
+      console.log('🏆 Broadcasting game ended event:', data);
+      this.io.to(data.roomId || this.getRoomIdByGameId(data.gameId)).emit('game_ended', {
+        gameId: data.gameId,
+        winnerId: data.winnerId,
+        winnerName: data.winnerName,
+        endReason: data.endReason,
+        endTime: data.endTime
+      });
+    });
+
+    console.log('✅ GameManager event listeners setup completed');
+  }
+
+  /**
+   * 根據遊戲ID獲取房間ID
+   */
+  getRoomIdByGameId(gameId) {
+    const game = this.gameManager.getGame(gameId);
+    return game ? game.roomId : null;
   }
 
   /**
@@ -85,7 +184,7 @@ class SocketService {
     
     // 遊戲相關事件
     socket.on('start_game', (data) => this.handleStartGame(socket, data));
-    socket.on(SocketEvents.GAME_ACTION, (data) => this.handleGameAction(socket, data));
+    socket.on(SocketEvents.PLAYER_ACTION, (data) => this.handleGameAction(socket, data));
     socket.on('get_game_state', (data) => this.handleGetGameState(socket, data));
     
     // 聊天相關事件
@@ -343,47 +442,62 @@ class SocketService {
    */
   async handleStartGame(socket, data) {
     try {
+      console.log('🎮 Start game request received:', data);
+      
       const player = this.playerManager.getPlayerBySocketId(socket.id);
       if (!player) {
+        console.log('❌ Player not authenticated for socket:', socket.id);
         return this.sendError(socket, ErrorCode.UNAUTHORIZED, 'Player not authenticated');
       }
+      console.log('✅ Player found:', player.id, player.name);
       
       const room = this.roomManager.getPlayerRoom(player.id);
       if (!room) {
+        console.log('❌ Player not in room:', player.id);
         return this.sendError(socket, ErrorCode.ROOM_NOT_FOUND, 'Player not in room');
       }
+      console.log('✅ Room found:', room.id, 'with', room.players.length, 'players');
       
       // 創建遊戲
+      console.log('🎮 Creating game...');
       const game = this.gameManager.createGame(room.id, room.settings);
+      console.log('✅ Game created:', game.gameId);
       
       // 將房間玩家加入遊戲
+      console.log('👥 Adding players to game...');
       for (const playerId of room.players) {
         const roomPlayer = this.playerManager.getPlayer(playerId);
         if (roomPlayer) {
-          await this.gameManager.joinGame(game.id, roomPlayer);
+          console.log('➕ Adding player to game:', roomPlayer.id, roomPlayer.name);
+          await this.gameManager.joinGame(game.gameId, roomPlayer);
         }
       }
+      console.log('✅ All players added to game');
       
       // 開始遊戲
-      const result = await this.gameManager.startGame(game.id, player.id);
+      console.log('🚀 Starting game...');
+      const result = await this.gameManager.startGame(game.gameId, player.id);
+      console.log('📊 Start game result:', result);
       
       if (result.success) {
         // 更新房間狀態
-        this.roomManager.startGame(room.id, player.id, game.id);
+        this.roomManager.startGame(room.id, player.id, game.gameId);
         
         // 更新玩家狀態
         room.players.forEach(playerId => {
-          this.playerManager.updatePlayerGame(playerId, game.id);
+          this.playerManager.updatePlayerGame(playerId, game.gameId);
         });
         
         // 通知房間所有玩家
+        console.log('📡 Emitting game_started event to room:', room.id);
         this.io.to(room.id).emit('game_started', {
           success: true,
-          gameId: game.id,
-          gameState: this.gameManager.getGameState(game.id)
+          gameId: game.gameId,
+          gameState: this.gameManager.getGameState(game.gameId)
         });
         
       } else {
+        console.log('❌ Game start failed:', result);
         socket.emit('game_started', {
           success: false,
           error: result.error,
@@ -391,7 +505,8 @@ class SocketService {
         });
       }
     } catch (error) {
-      console.error('Start game error:', error);
+      console.error('❌ Start game error:', error);
+      console.error('❌ Error stack:', error.stack);
       this.sendError(socket, ErrorCode.UNKNOWN_ERROR, error.message);
     }
   }

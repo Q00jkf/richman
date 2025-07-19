@@ -107,20 +107,25 @@ class GameTester {
 
   async createPlayer(name = '測試玩家', avatar = 'test.png') {
     return new Promise((resolve, reject) => {
-      console.log(`👤 創建玩家: ${name}`);
+      console.log(`👤 認證玩家: ${name}`);
       
-      this.socket.emit('player:create', { name, avatar });
+      this.socket.emit('authenticate', { name, avatar });
       
-      this.socket.once('player:created', (data) => {
-        this.playerId = data.playerId;
-        console.log(`✅ 玩家創建成功！ID: ${this.playerId}`);
-        resolve(data);
+      this.socket.once('authenticated', (data) => {
+        if (data.success) {
+          this.playerId = data.player.id;
+          console.log(`✅ 玩家認證成功！ID: ${this.playerId} 名稱: ${data.player.name}`);
+          resolve(data);
+        } else {
+          console.error('❌ 玩家認證失敗:', data.error, data.message);
+          reject(new Error(data.message || data.error));
+        }
       });
       
-      this.socket.once('player:error', (error) => {
-        console.error('❌ 玩家創建失敗:', error);
-        reject(error);
-      });
+      // Set timeout for authentication
+      setTimeout(() => {
+        reject(new Error('Authentication timeout'));
+      }, 10000);
     });
   }
 
@@ -128,26 +133,30 @@ class GameTester {
     return new Promise((resolve, reject) => {
       console.log(`🏠 創建房間: ${roomName}`);
       
-      this.socket.emit('room:create', {
+      this.socket.emit('create_room', {
         name: roomName,
         maxPlayers,
-        hostPlayerId: this.playerId,
         settings: {
           startingMoney: 1500,
           timeLimit: 120
         }
       });
       
-      this.socket.once('room:created', (data) => {
-        this.roomId = data.roomId;
-        console.log(`✅ 房間創建成功！ID: ${this.roomId}`);
-        resolve(data);
+      this.socket.once('room_created', (data) => {
+        if (data.success) {
+          this.roomId = data.room.id;
+          console.log(`✅ 房間創建成功！ID: ${this.roomId} 名稱: ${data.room.name}`);
+          resolve(data);
+        } else {
+          console.error('❌ 房間創建失敗:', data.error, data.message);
+          reject(new Error(data.message || data.error));
+        }
       });
       
-      this.socket.once('room:error', (error) => {
-        console.error('❌ 房間創建失敗:', error);
-        reject(error);
-      });
+      // Set timeout for room creation
+      setTimeout(() => {
+        reject(new Error('Room creation timeout'));
+      }, 10000);
     });
   }
 
@@ -155,59 +164,88 @@ class GameTester {
     return new Promise((resolve, reject) => {
       console.log(`🚪 加入房間: ${roomId}`);
       
-      this.socket.emit('room:join', {
-        playerId: this.playerId,
+      this.socket.emit('join_room', {
         roomId: roomId
       });
       
-      this.socket.once('room:joined', (data) => {
-        this.roomId = roomId;
-        console.log(`✅ 成功加入房間！`);
-        resolve(data);
+      this.socket.once('room_joined', (data) => {
+        if (data.success) {
+          this.roomId = roomId;
+          console.log(`✅ 成功加入房間！房間: ${data.room.name}`);
+          resolve(data);
+        } else {
+          console.error('❌ 加入房間失敗:', data.error, data.message);
+          reject(new Error(data.message || data.error));
+        }
       });
       
-      this.socket.once('room:error', (error) => {
-        console.error('❌ 加入房間失敗:', error);
-        reject(error);
-      });
+      // Set timeout for joining room
+      setTimeout(() => {
+        reject(new Error('Join room timeout'));
+      }, 10000);
     });
   }
 
   async startGame() {
-    if (!this.roomId) {
-      console.error('❌ 沒有房間ID，無法開始遊戲');
-      return;
-    }
+    return new Promise((resolve, reject) => {
+      if (!this.roomId) {
+        const error = new Error('沒有房間ID，無法開始遊戲');
+        console.error('❌', error.message);
+        reject(error);
+        return;
+      }
 
-    console.log('🎮 嘗試開始遊戲...');
-    this.socket.emit('game:start', {
-      roomId: this.roomId,
-      hostPlayerId: this.playerId
+      console.log('🎮 嘗試開始遊戲...');
+      this.socket.emit('start_game', {
+        roomId: this.roomId,
+        hostPlayerId: this.playerId
+      });
+      
+      this.socket.once('game_started', (data) => {
+        if (data.success) {
+          console.log(`✅ 遊戲開始成功！遊戲ID: ${data.gameId}`);
+          resolve(data);
+        } else {
+          console.error('❌ 遊戲開始失敗:', data.error, data.message);
+          reject(new Error(data.message || data.error));
+        }
+      });
+      
+      // Set timeout for game start
+      setTimeout(() => {
+        reject(new Error('Start game timeout'));
+      }, 10000);
     });
   }
 
   rollDice() {
     console.log('🎲 擲骰子...');
-    this.socket.emit('game:action', {
-      type: 'ROLL_DICE',
-      playerId: this.playerId
+    this.socket.emit('player_action', {
+      action: {
+        type: 'ROLL_DICE',
+        playerId: this.playerId
+      }
     });
   }
 
   buyProperty(propertyId) {
     console.log(`🏠 嘗試購買地產 ${propertyId}...`);
-    this.socket.emit('game:action', {
-      type: 'BUY_PROPERTY',
-      playerId: this.playerId,
-      data: { propertyId }
+    this.socket.emit('player_action', {
+      action: {
+        type: 'BUY_PROPERTY',
+        playerId: this.playerId,
+        data: { propertyId }
+      }
     });
   }
 
   endTurn() {
     console.log('⏭️ 結束回合...');
-    this.socket.emit('game:action', {
-      type: 'END_TURN',
-      playerId: this.playerId
+    this.socket.emit('player_action', {
+      action: {
+        type: 'END_TURN',
+        playerId: this.playerId
+      }
     });
   }
 

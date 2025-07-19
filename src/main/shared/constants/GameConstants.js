@@ -141,6 +141,17 @@ const NotificationType = {
   PLAYER_LEFT: 'player_left'
 };
 
+// 訊息類型
+const MessageType = {
+  SYSTEM: 'system',
+  CHAT: 'chat',
+  INFO: 'info',
+  WARNING: 'warning',
+  ERROR: 'error',
+  SUCCESS: 'success',
+  DEBUG: 'debug'
+};
+
 // 遊戲配置
 const GameConfig = {
   MAX_PLAYERS: 6,
@@ -305,6 +316,7 @@ module.exports = {
   GameEndReason,
   TradeStatus,
   NotificationType,
+  MessageType,
   GameConfig,
   ErrorCode,
   SocketEvents,

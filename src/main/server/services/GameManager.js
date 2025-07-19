@@ -33,10 +33,62 @@ class GameManager {
     const gameId = uuidv4();
     const gameEngine = new GameEngine(gameId, roomId, settings);
     
+    // 設置 GameEngine 事件監聽器
+    this.setupGameEngineListeners(gameEngine);
+    
     this.games.set(gameId, gameEngine);
     
     console.log(`🎮 Game created: ${gameId} for room: ${roomId}`);
     return gameEngine;
+  }
+
+  /**
+   * 設置 GameEngine 事件監聽器
+   */
+  setupGameEngineListeners(gameEngine) {
+    // 遊戲開始事件
+    gameEngine.on(GameEventType.GAME_STARTED, (data) => {
+      console.log('📡 Game started event from engine:', data);
+      this.emit(GameEventType.GAME_STARTED, data);
+    });
+
+    // 回合開始事件
+    gameEngine.on(GameEventType.TURN_STARTED, (data) => {
+      console.log('📡 Turn started event from engine:', data);
+      this.emit(GameEventType.TURN_STARTED, data);
+    });
+
+    // 骰子事件
+    gameEngine.on(GameEventType.DICE_ROLLED, (data) => {
+      console.log('📡 Dice rolled event from engine:', data);
+      this.emit(GameEventType.DICE_ROLLED, data);
+    });
+
+    // 玩家移動事件
+    gameEngine.on(GameEventType.PLAYER_MOVED, (data) => {
+      console.log('📡 Player moved event from engine:', data);
+      this.emit(GameEventType.PLAYER_MOVED, data);
+    });
+
+    // 地產購買事件
+    gameEngine.on(GameEventType.PROPERTY_BOUGHT, (data) => {
+      console.log('📡 Property bought event from engine:', data);
+      this.emit(GameEventType.PROPERTY_BOUGHT, data);
+    });
+
+    // 租金支付事件
+    gameEngine.on(GameEventType.RENT_PAID, (data) => {
+      console.log('📡 Rent paid event from engine:', data);
+      this.emit(GameEventType.RENT_PAID, data);
+    });
+
+    // 遊戲結束事件
+    gameEngine.on(GameEventType.GAME_ENDED, (data) => {
+      console.log('📡 Game ended event from engine:', data);
+      this.emit(GameEventType.GAME_ENDED, data);
+    });
+
+    console.log('✅ GameEngine event listeners setup completed');
   }
 
   /**
