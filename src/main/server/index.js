@@ -21,8 +21,9 @@ class RichManServer {
     this.server = http.createServer(this.app);
     this.io = socketIO(this.server, {
       cors: {
-        origin: process.env.CLIENT_URL || "http://localhost:3000",
-        methods: ["GET", "POST"]
+        origin: "*", // 允許所有來源 (手機連接需要)
+        methods: ["GET", "POST"],
+        credentials: false
       }
     });
     
@@ -44,8 +45,8 @@ class RichManServer {
   initializeMiddleware() {
     // 基礎中間件
     this.app.use(cors({
-      origin: process.env.CLIENT_URL || "http://localhost:3000",
-      credentials: true
+      origin: "*", // 允許所有來源 (手機連接需要)
+      credentials: false
     }));
     
     this.app.use(express.json());
