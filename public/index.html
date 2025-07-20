@@ -848,7 +848,9 @@
                             <div><strong>玩家ID:</strong> <span id="debugMyPlayerId">-</span></div>
                             <div><strong>金錢:</strong> <span id="debugMyMoney">$1500</span></div>
                             <div><strong>位置:</strong> <span id="debugMyPosition">起點</span></div>
-                            <div><strong>年齡:</strong> <span id="debugMyAge">18</span>歲</div>
+                            <div><strong>年齡:</strong> <span id="debugMyAge">1</span>歲</div>
+                            <div><strong>職業:</strong> <span id="debugMyProfession">無業</span></div>
+                            <div><strong>年薪:</strong> <span id="debugMySalary">$1000</span></div>
                             <div><strong>骰子次數:</strong> <span id="debugMyDiceCount">0</span>/5</div>
                             <div><strong>地產數:</strong> <span id="debugMyProperties">0</span></div>
                             <div><strong>技能卡:</strong> <span id="debugMySkills">0</span></div>
@@ -891,6 +893,22 @@
                     <div class="status-item">
                         <div class="status-label">📍 位置</div>
                         <div class="status-value" id="playerPosition">起點</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">🎂 年齡</div>
+                        <div class="status-value" id="playerAge">1歲</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">🎲 投骰</div>
+                        <div class="status-value" id="diceCount">0/5</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">💼 職業</div>
+                        <div class="status-value" id="playerProfession">無業</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">💵 年薪</div>
+                        <div class="status-value" id="playerSalary">$1000</div>
                     </div>
                     <div class="status-item">
                         <div class="status-label">🏠 地產</div>
@@ -964,8 +982,10 @@
             position: 0,
             properties: [],
             skillCards: [],
-            age: 18,
-            diceRollCount: 0
+            age: 1,
+            profession: '無業',
+            annualSalary: 1000,
+            diceCount: 0
         };
         
         // DOM 元素
@@ -1047,9 +1067,11 @@
             
             let html = '';
             opponents.forEach((opponent, index) => {
-                // 假設每個對手也有年齡和骰子計數（簡化版本，實際應該從伺服器同步）
-                const age = 18 + Math.floor((opponent.position || 0) / 8); // 基於位置估算年齡
-                const diceCount = (opponent.position || 0) % 5; // 基於位置估算骰子次數
+                // 使用實際的伺服器同步資料
+                const age = opponent.age || 1;
+                const diceCount = opponent.diceCount || 0;
+                const profession = opponent.profession || '無業';
+                const salary = opponent.annualSalary || 1000;
                 
                 html += `
                     <div style="background: rgba(255, 255, 255, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; line-height: 1.4;">
@@ -1057,6 +1079,8 @@
                         <div><strong>💰 金錢:</strong> $${opponent.money || 1500}</div>
                         <div><strong>📍 位置:</strong> ${getBoardSpaceName(opponent.position || 0)}</div>
                         <div><strong>🎂 年齡:</strong> ${age}歲</div>
+                        <div><strong>💼 職業:</strong> ${profession}</div>
+                        <div><strong>💵 年薪:</strong> $${salary}</div>
                         <div><strong>🎲 骰子:</strong> ${diceCount}/5</div>
                     </div>
                 `;
@@ -1082,10 +1106,18 @@
                 if (myPlayer) {
                     document.getElementById('debugMyMoney').textContent = `$${myPlayer.money || 1500}`;
                     document.getElementById('debugMyPosition').textContent = getBoardSpaceName(myPlayer.position || 0);
-                    document.getElementById('debugMyAge').textContent = playerData.age || 18;
-                    document.getElementById('debugMyDiceCount').textContent = playerData.diceRollCount || 0;
+                    document.getElementById('debugMyAge').textContent = myPlayer.age || 1;
+                    document.getElementById('debugMyProfession').textContent = myPlayer.profession || '無業';
+                    document.getElementById('debugMySalary').textContent = `$${myPlayer.annualSalary || 1000}`;
+                    document.getElementById('debugMyDiceCount').textContent = myPlayer.diceCount || 0;
                     document.getElementById('debugMyProperties').textContent = (myPlayer.properties || []).length;
                     document.getElementById('debugMySkills').textContent = (myPlayer.skillCards || []).length;
+                    
+                    // 同步本地playerData
+                    playerData.age = myPlayer.age || 1;
+                    playerData.profession = myPlayer.profession || '無業';
+                    playerData.annualSalary = myPlayer.annualSalary || 1000;
+                    playerData.diceCount = myPlayer.diceCount || 0;
                 }
                 
                 // 更新對手資訊
@@ -1210,15 +1242,25 @@
             
             socket.on('dice_rolled', (data) => {
                 const result = data.diceResult;
-                addLog(`🎲 擲骰結果: ${result.dice1} + ${result.dice2} = ${result.total}`, 'game');
+                addLog(`🎲 ${data.playerName} 擲骰結果: ${result.dice1} + ${result.dice2} = ${result.total}`, 'game');
+                addLog(`🎲 骰子計數: ${result.diceCount}/5`, 'info');
                 
-                // 如果是當前玩家擲骰，更新年齡系統
+                // 如果年齡增加了
+                if (result.ageIncreased) {
+                    addLog(`🎂 ${data.playerName} 年齡增長！投滿5次骰子`, 'game');
+                }
+                
+                // 更新當前玩家的本地狀態
                 if (data.playerId === currentPlayerId) {
-                    playerData.diceRollCount++;
-                    if (playerData.diceRollCount >= 5) {
-                        playerData.age++;
-                        playerData.diceRollCount = 0;
-                        addLog(`🎂 年齡增長！您現在 ${playerData.age} 歲了`, 'info');
+                    if (currentGameState) {
+                        const myPlayer = currentGameState.players?.find(p => p.id === currentPlayerId);
+                        if (myPlayer) {
+                            myPlayer.diceCount = result.diceCount;
+                            if (result.ageIncreased) {
+                                myPlayer.age = (myPlayer.age || 1) + 1;
+                                addLog(`🎂 您現在 ${myPlayer.age} 歲了！`, 'success');
+                            }
+                        }
                     }
                     updateDebugInfo();
                 }
@@ -1230,6 +1272,38 @@
                 // 如果是當前玩家，更新位置顯示
                 if (data.playerId === currentPlayerId) {
                     updatePlayerPosition(data.newPosition);
+                }
+            });
+            
+            socket.on('player_aged', (data) => {
+                addLog(`🎂 ${data.playerName} 年齡增加到 ${data.newAge} 歲，獲得年薪 $${data.salaryReceived}`, 'game');
+                
+                // 如果是當前玩家，更新狀態顯示
+                if (data.playerId === currentPlayerId) {
+                    if (currentGameState) {
+                        const myPlayer = currentGameState.players?.find(p => p.id === currentPlayerId);
+                        if (myPlayer) {
+                            myPlayer.age = data.newAge;
+                            myPlayer.money += data.salaryReceived;
+                            updatePlayerData(myPlayer);
+                        }
+                    }
+                    updateDebugInfo();
+                }
+            });
+            
+            socket.on('players_status_update', (data) => {
+                // 處理玩家狀態更新事件，確保所有玩家狀態同步
+                if (data.players && currentGameState) {
+                    currentGameState.players = data.players;
+                    updateDebugInfo();
+                    updateOpponentsInfo();
+                    
+                    // 更新當前玩家的狀態顯示
+                    const myPlayer = data.players.find(p => p.id === currentPlayerId);
+                    if (myPlayer) {
+                        updatePlayerData(myPlayer);
+                    }
                 }
             });
             
@@ -1282,6 +1356,10 @@
                 // 更新玩家狀態顯示
                 document.getElementById('playerMoney').textContent = `$${playerData.money || 1500}`;
                 document.getElementById('playerPosition').textContent = getBoardSpaceName(playerData.position || 0);
+                document.getElementById('playerAge').textContent = `${playerData.age || 1}歲`;
+                document.getElementById('playerProfession').textContent = playerData.profession || '無業';
+                document.getElementById('playerSalary').textContent = `$${playerData.annualSalary || 1000}`;
+                document.getElementById('diceCount').textContent = `${playerData.diceCount || 0}/5`;
                 document.getElementById('propertyCount').textContent = (playerData.properties || []).length;
                 document.getElementById('skillCardCount').textContent = (playerData.skillCards || []).length;
             }

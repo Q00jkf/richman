@@ -533,6 +533,23 @@ class RichManRenderServer {
       action: 'state_updated',
       timestamp: new Date().toISOString()
     });
+    
+    // 發送玩家狀態更新事件，確保所有玩家看到最新狀態
+    this.io.to(gameState.roomId).emit('players_status_update', {
+      players: gameState.players.map(player => ({
+        id: player.id,
+        name: player.name,
+        money: player.money,
+        position: player.position,
+        age: player.age,
+        profession: player.profession,
+        annualSalary: player.annualSalary,
+        diceCount: player.diceCount,
+        properties: player.properties,
+        isOnline: player.isOnline
+      })),
+      timestamp: new Date().toISOString()
+    });
   }
   
   // 尋找玩家所在的遊戲

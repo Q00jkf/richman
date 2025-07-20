@@ -4,10 +4,71 @@ Online multiplayer Monopoly game with real-time web-based gameplay.
 
 ## Quick Start
 
-1. **Read CLAUDE.md first** - Contains essential rules for Claude Code
-2. Install dependencies: `npm install`
-3. Run development server: `npm run dev`
-4. Open browser to `http://localhost:3000`
+### 🎮 立即遊玩
+
+**直接訪問**: https://richman-online-game.onrender.com/
+
+1. 開啟網頁
+2. 創建玩家
+3. 加入房間或創建新房間
+4. 開始遊戲！
+
+### 📱 支援裝置
+- 電腦瀏覽器 (Chrome, Firefox, Safari)
+- 手機瀏覽器 (iOS Safari, Android Chrome)
+- 平板裝置
+
+### 👥 開發者設置
+需要修改代碼時：
+```bash
+git clone [repository]
+npm install && cd src/main/client && npm install
+```
+
+## 🛠️ Developer Quick Start (Claude Code)
+
+### 📁 **關鍵檔案位置**
+```
+🎮 遊戲邏輯：
+- 主服務器: deployment/render/server.js (雲端部署用)
+- 本地服務器: src/main/server/index.js (完整版)
+- 遊戲引擎: src/main/server/services/GameEngine.js
+- 房間管理: src/main/server/services/RoomManager.js
+
+🎨 前端介面：
+- 主程式: src/main/client/src/App.js
+- 遊戲頁面: src/main/client/pages/
+- UI組件: src/main/client/components/
+- 樣式: src/main/client/src/styles/global.css
+
+📡 即時通訊：
+- Socket服務: src/main/server/services/SocketService.js
+- 前端Socket: src/main/client/src/contexts/SocketContext.js
+
+⚙️ 配置檔案：
+- 遊戲常數: src/main/shared/constants/GameConstants.js
+- 棋盤設定: src/main/shared/constants/BoardConstants.js
+```
+
+### 🎯 **常見修改任務**
+
+**修改遊戲規則 →** `src/main/server/services/GameEngine.js`
+**調整UI外觀 →** `src/main/client/src/styles/global.css` + `src/main/client/components/`
+**新增遊戲功能 →** `deployment/render/server.js` (handleGameAction函數)
+**修改房間系統 →** `src/main/server/services/RoomManager.js`
+**調整棋盤 →** `src/main/shared/constants/BoardConstants.js`
+
+### 🚀 **部署流程**
+1. 修改代碼後測試
+2. `git add . && git commit -m "描述"`
+3. `git push origin main` (自動部署到 Render)
+4. 檢查 https://richman-online-game.onrender.com/
+
+### 🎮 **專案狀態**
+- ✅ 基礎架構完成 (WebSocket + 房間系統)
+- ✅ 多人遊戲核心功能 (投骰、移動、年齡系統)
+- 🔄 遊戲內容擴展中 (職業、技能卡、財產系統)
+- ⏳ UI美化待完成
 
 ## Features
 
