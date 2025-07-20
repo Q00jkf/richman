@@ -130,6 +130,33 @@ Before starting ANY task, verify:
 
 ## 🚀 COMMON COMMANDS
 
+⚠️ **CRITICAL: 確保在正確的Git倉庫中工作**
+```bash
+# 正確的專案目錄 - 必須檢查！
+cd /mnt/c/codeing/richman
+pwd  # 必須顯示: /mnt/c/codeing/richman
+git remote -v  # 必須顯示 richman 倉庫，不是其他專案
+git branch  # 必須在 richman-render 分支
+```
+
+### 📁 **Git 工作流程**
+```bash
+# 1. 確認位置 (關鍵步驟！)
+cd /mnt/c/codeing/richman
+pwd  # 檢查目錄
+
+# 2. 檢查分支
+git branch  # 應該顯示 * richman-render
+
+# 3. 提交變更
+git add .
+git commit -m "描述"
+
+# 4. 推送部署 (自動觸發 Render)
+git push origin richman-render
+```
+
+### 💻 **開發命令**
 ```bash
 # Install dependencies
 npm install

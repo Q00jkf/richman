@@ -59,10 +59,21 @@ npm install && cd src/main/client && npm install
 **調整棋盤 →** `src/main/shared/constants/BoardConstants.js`
 
 ### 🚀 **部署流程**
+
+⚠️ **重要：確保在正確的Git倉庫中工作**
+```bash
+# 正確的專案目錄和Git倉庫
+cd /mnt/c/codeing/richman
+pwd  # 應該顯示: /mnt/c/codeing/richman
+git remote -v  # 應該顯示 richman 倉庫
+```
+
 1. 修改代碼後測試
-2. `git add . && git commit -m "描述"`
-3. `git push origin main` (自動部署到 Render)
-4. 檢查 https://richman-online-game.onrender.com/
+2. **切換到正確目錄**：`cd /mnt/c/codeing/richman`
+3. **檢查分支**：`git branch` (應該在 `richman-render` 分支)
+4. **提交變更**：`git add . && git commit -m "描述"`
+5. **推送部署**：`git push origin richman-render` (自動部署到 Render)
+6. 檢查 https://richman-online-game.onrender.com/
 
 ### 🎮 **專案狀態**
 - ✅ 基礎架構完成 (WebSocket + 房間系統)
