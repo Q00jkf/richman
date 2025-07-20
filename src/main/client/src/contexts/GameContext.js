@@ -286,6 +286,32 @@ export function GameProvider({ children }) {
       }
     });
 
+    // 玩家年齡增加事件
+    socket.on('player_aged', (data) => {
+      addNotification({ 
+        type: 'success', 
+        message: `玩家年齡增加到 ${data.newAge} 歲，獲得年薪 $${data.salaryReceived}!` 
+      });
+    });
+
+    // 遊戲狀態更新事件 (用於同步所有玩家狀態)
+    socket.on('game_state_update', (data) => {
+      if (data.gameState && data.gameState.players) {
+        dispatch({ type: ACTION_TYPES.SET_PLAYERS, payload: data.gameState.players });
+        
+        // 更新其他遊戲狀態
+        dispatch({ 
+          type: ACTION_TYPES.SET_GAME_STATE, 
+          payload: {
+            gamePhase: data.gameState.gamePhase,
+            currentPlayerIndex: data.gameState.currentPlayerIndex,
+            roundNumber: data.gameState.roundNumber,
+            diceResult: data.gameState.diceResult
+          }
+        });
+      }
+    });
+
     socket.on('game:property_bought', (data) => {
       addNotification({ 
         type: 'info', 
@@ -309,6 +335,8 @@ export function GameProvider({ children }) {
       socket.off('game:player_moved');
       socket.off('game:property_bought');
       socket.off('game:card_drawn');
+      socket.off('player_aged');
+      socket.off('game_state_update');
     };
   }, [socket, isConnected, gameState.myPlayerId, gameState.players]);
 

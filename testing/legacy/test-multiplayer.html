@@ -386,13 +386,33 @@
                     currentPlayerName = gameState.currentPlayer.name || '無';
                 }
                 
+                // 生成玩家狀態顯示
+                let playersInfo = '';
+                if (gameState.players && gameState.players.length > 0) {
+                    playersInfo = gameState.players.map((player, index) => {
+                        const isCurrentPlayer = index === gameState.currentPlayerIndex;
+                        const indicator = isCurrentPlayer ? '👉' : '  ';
+                        return `
+                            ${indicator} <strong>${player.name}</strong>: 
+                            💰$${player.money || 0} | 
+                            🎂${player.age || 1}歲 | 
+                            💼${player.profession || '無業'} | 
+                            💵年薪$${player.annualSalary || 1000} | 
+                            🎲${player.diceCount || 0}/5次 | 
+                            📍位置${player.position || 0}
+                        `;
+                    }).join('<br>');
+                }
+                
                 // 更新遊戲狀態顯示
                 gameStateDisplay.innerHTML = `
                     <strong>回合:</strong> ${gameState.roundNumber || gameState.currentTurn || '1'}<br>
                     <strong>階段:</strong> ${phase}<br>
                     <strong>玩家數:</strong> ${gameState.players?.length || 0}<br>
                     <strong>當前玩家:</strong> ${currentPlayerName}<br>
-                    <strong>當前玩家索引:</strong> ${gameState.currentPlayerIndex !== undefined ? gameState.currentPlayerIndex : '無'}
+                    <strong>當前玩家索引:</strong> ${gameState.currentPlayerIndex !== undefined ? gameState.currentPlayerIndex : '無'}<br><br>
+                    <strong>玩家狀態:</strong><br>
+                    ${playersInfo || '無玩家資料'}
                 `;
                 
                 addLog(`📊 遊戲狀態: ${phase}, 當前玩家: ${currentPlayerName}`, 'info');
@@ -497,6 +517,23 @@
                 }
             });
             
+            // 玩家年齡增加事件
+            socket.on('player_aged', (data) => {
+                addLog(`🎂 玩家年齡增加! 新年齡: ${data.newAge}歲, 獲得年薪: $${data.salaryReceived}`, 'game');
+                // 刷新遊戲狀態以顯示最新信息
+                setTimeout(() => {
+                    getGameState();
+                }, 500);
+            });
+            
+            // 遊戲狀態更新事件
+            socket.on('game_state_update', (data) => {
+                console.log('📊 Received game_state_update event:', data);
+                if (data.gameState) {
+                    updateGameState(data.gameState);
+                }
+            });
+            
             socket.on('game_state', (data) => {
                 if (data.success) {
                     updateGameState(data.gameState);
@@ -532,7 +569,9 @@
             
             socket.on('dice_rolled', (data) => {
                 const result = data.diceResult;
-                addLog(`🎲 擲骰結果: ${result.dice1} + ${result.dice2} = ${result.total}`, 'game');
+                const diceCountInfo = result.diceCount !== undefined ? ` (第${result.diceCount}/5次)` : '';
+                const ageInfo = result.ageIncreased ? ' 🎂年齡增加!' : '';
+                addLog(`🎲 擲骰結果: ${result.dice1} + ${result.dice2} = ${result.total}${diceCountInfo}${ageInfo}`, 'game');
             });
             
             socket.on('player_moved', (data) => {

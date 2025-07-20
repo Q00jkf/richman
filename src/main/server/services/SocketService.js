@@ -53,11 +53,23 @@ class SocketService {
     // 擲骰子事件
     this.gameManager.on(GameEventType.DICE_ROLLED, (data) => {
       console.log('🎲 Broadcasting dice rolled event:', data);
-      this.io.to(data.roomId || this.getRoomIdByGameId(data.gameId)).emit('dice_rolled', {
+      const roomId = data.roomId || this.getRoomIdByGameId(data.gameId);
+      
+      this.io.to(roomId).emit('dice_rolled', {
         playerId: data.playerId,
         diceResult: data.diceResult,
         gameId: data.gameId
       });
+      
+      // 同時廣播最新的遊戲狀態以確保所有玩家狀態同步
+      const gameState = this.gameManager.getGameState(data.gameId);
+      if (gameState) {
+        this.io.to(roomId).emit('game_state_update', {
+          gameState: gameState,
+          action: 'dice_rolled',
+          playerId: data.playerId
+        });
+      }
     });
 
     // 玩家移動事件
@@ -90,6 +102,17 @@ class SocketService {
         receiverId: data.receiverId,
         amount: data.amount,
         propertyId: data.propertyId,
+        gameId: data.gameId
+      });
+    });
+
+    // 玩家年齡增加事件
+    this.gameManager.on(GameEventType.PLAYER_AGED, (data) => {
+      console.log('🎂 Broadcasting player aged event:', data);
+      this.io.to(data.roomId || this.getRoomIdByGameId(data.gameId)).emit('player_aged', {
+        playerId: data.playerId,
+        newAge: data.newAge,
+        salaryReceived: data.salaryReceived,
         gameId: data.gameId
       });
     });

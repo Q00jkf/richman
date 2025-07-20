@@ -104,6 +104,10 @@ class GameEngine {
       avatar: player.avatar || '',
       money: this.settings.startingMoney,
       position: 0,
+      age: 1, // 初始年齡為1歲
+      profession: '無業', // 預設職業
+      annualSalary: 1000, // 預設年薪
+      diceCount: 0, // 投骰計數器
       properties: [],
       jailStatus: {
         isInJail: false,
@@ -317,24 +321,50 @@ class GameEngine {
       return { success: false, message: 'Cannot roll dice now' };
     }
 
+    const player = this.getPlayer(playerId);
+    
     const dice1 = Math.floor(Math.random() * 6) + 1;
     const dice2 = Math.floor(Math.random() * 6) + 1;
     const total = dice1 + dice2;
     const isDouble = dice1 === dice2;
+
+    // 增加投骰計數器
+    player.diceCount++;
+
+    // 檢查是否投滿5次，如果是則年齡增加並重置計數器
+    let ageIncreased = false;
+    if (player.diceCount >= 5) {
+      player.age++;
+      player.money += player.annualSalary; // 加上年薪
+      player.diceCount = 0; // 重置計數器
+      ageIncreased = true;
+      
+      console.log(`🎂 Player ${playerId} aged to ${player.age} and received salary $${player.annualSalary}`);
+      
+      this.emit(GameEventType.PLAYER_AGED, {
+        gameId: this.gameId,
+        roomId: this.roomId,
+        playerId,
+        newAge: player.age,
+        salaryReceived: player.annualSalary
+      });
+    }
 
     const diceResult = {
       dice1,
       dice2,
       total,
       isDouble,
-      rollTime: new Date()
+      rollTime: new Date(),
+      diceCount: player.diceCount,
+      ageIncreased
     };
 
     this.gameState.diceResult = diceResult;
     this.gameState.gamePhase = GamePhase.DICE_ROLLING;
     this.updateGameState();
 
-    console.log(`🎲 Player ${playerId} rolled: ${dice1} + ${dice2} = ${total}`);
+    console.log(`🎲 Player ${playerId} rolled: ${dice1} + ${dice2} = ${total} (dice count: ${player.diceCount}/5)`);
     
     this.emit(GameEventType.DICE_ROLLED, {
       gameId: this.gameId,

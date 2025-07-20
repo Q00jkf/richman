@@ -9,6 +9,10 @@ export interface Player {
   avatar: string;
   money: number;
   position: number; // 在地圖上的位置 (0-39)
+  age: number; // 玩家年齡
+  profession: string; // 玩家職業
+  annualSalary: number; // 年薪
+  diceCount: number; // 投骰子計數器
   properties: PropertyOwnership[];
   jailStatus: JailStatus;
   isActive: boolean;

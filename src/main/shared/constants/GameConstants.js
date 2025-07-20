@@ -64,6 +64,7 @@ const GameEventType = {
   TRADE_PROPOSED: 'trade_proposed',
   TRADE_COMPLETED: 'trade_completed',
   PLAYER_BANKRUPTED: 'player_bankrupted',
+  PLAYER_AGED: 'player_aged',
   GAME_ENDED: 'game_ended',
   SALARY_COLLECTED: 'salary_collected',
   TAX_PAID: 'tax_paid',
