@@ -58,7 +58,7 @@ npm run test:websocket
 ### 方式 2: 瀏覽器手動測試
 
 **選項 A: 使用專用測試頁面 (推薦)**
-1. 開啟瀏覽器，訪問 `file:///C:/codeing/richman/test-websocket.html`
+1. 開啟瀏覽器，訪問 `file:///C:/codeing/richman/testing/legacy/test-websocket.html`
 2. 看到漂亮的測試界面，按照步驟操作：
    - 點擊「創建玩家」
    - 點擊「創建房間」  
@@ -243,7 +243,8 @@ netstat -ano | findstr :5000
 ## 📖 更多資源
 
 - **詳細測試指南**: `docs/TESTING_GUIDE.md`
-- **工具使用說明**: `tools/README.md`
+- **測試工具**: `testing/legacy/`
+- **部署文檔**: `deployment/render/`
 - **專案架構**: `docs/SYSTEM_ARCHITECTURE_REPORT.md`
 - **工作日誌**: `WORK_LOG.md`
 

@@ -188,7 +188,7 @@ socket.emit('player:join', {
 
 ### 2. 使用 Node.js 腳本測試
 
-創建測試文件 `test-websocket.js`：
+使用現有測試文件 `testing/legacy/test-websocket.js`：
 
 ```javascript
 const io = require('socket.io-client');
@@ -217,7 +217,7 @@ socket.onAny((eventName, ...args) => {
 
 執行測試：
 ```bash
-node test-websocket.js
+node testing/legacy/test-websocket.js
 ```
 
 ---
