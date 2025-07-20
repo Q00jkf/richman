@@ -88,6 +88,10 @@ class RichManRenderServer {
           avatar: data.avatar || 'default',
           money: 1500,
           position: 0,
+          age: 1, // 初始年齡為1歲
+          profession: '無業', // 預設職業
+          annualSalary: 1000, // 預設年薪
+          diceCount: 0, // 投骰計數器
           properties: [],
           skillCards: [],
           joinTime: new Date().toISOString(),
@@ -296,6 +300,10 @@ class RichManRenderServer {
               name: player.name,
               money: room.settings.startingMoney || 1500,
               position: 0,
+              age: 1, // 初始年齡為1歲
+              profession: '無業', // 預設職業
+              annualSalary: 1000, // 預設年薪
+              diceCount: 0, // 投骰計數器
               properties: [],
               skillCards: [],
               isOnline: true
@@ -423,15 +431,44 @@ class RichManRenderServer {
     const oldPosition = currentPlayer.position;
     const newPosition = (oldPosition + total) % 40; // 假設40格棋盤
     
+    // 增加投骰計數器
+    currentPlayer.diceCount++;
+    
+    // 檢查是否投滿5次，如果是則年齡增加並重置計數器
+    let ageIncreased = false;
+    if (currentPlayer.diceCount >= 5) {
+      currentPlayer.age++;
+      currentPlayer.money += currentPlayer.annualSalary; // 加上年薪
+      currentPlayer.diceCount = 0; // 重置計數器
+      ageIncreased = true;
+      
+      console.log(`🎂 ${currentPlayer.name} 年齡增加到 ${currentPlayer.age} 歲，獲得年薪 $${currentPlayer.annualSalary}`);
+      
+      // 廣播年齡增加事件
+      this.io.to(gameState.roomId).emit('player_aged', {
+        playerId: socket.id,
+        playerName: currentPlayer.name,
+        newAge: currentPlayer.age,
+        salaryReceived: currentPlayer.annualSalary,
+        gameId: gameState.roomId
+      });
+    }
+    
     currentPlayer.position = newPosition;
     
-    console.log(`🎲 ${currentPlayer.name} 擲骰: ${dice1}+${dice2}=${total}, 位置: ${oldPosition}→${newPosition}`);
+    console.log(`🎲 ${currentPlayer.name} 擲骰: ${dice1}+${dice2}=${total}, 位置: ${oldPosition}→${newPosition} (骰子計數: ${currentPlayer.diceCount}/5)`);
     
-    // 通知所有玩家
+    // 通知所有玩家擲骰結果
     this.io.to(gameState.roomId).emit('dice_rolled', {
       playerId: socket.id,
       playerName: currentPlayer.name,
-      diceResult: { dice1, dice2, total },
+      diceResult: { 
+        dice1, 
+        dice2, 
+        total,
+        diceCount: currentPlayer.diceCount,
+        ageIncreased 
+      },
       oldPosition,
       newPosition
     });
@@ -484,9 +521,17 @@ class RichManRenderServer {
   
   // 更新遊戲狀態
   updateGameState(gameState) {
+    // 發送完整的遊戲狀態給房間內所有玩家
     this.io.to(gameState.roomId).emit('game_state', {
       success: true,
       gameState: gameState
+    });
+    
+    // 發送遊戲狀態更新事件以確保前端同步
+    this.io.to(gameState.roomId).emit('game_state_update', {
+      gameState: gameState,
+      action: 'state_updated',
+      timestamp: new Date().toISOString()
     });
   }
   

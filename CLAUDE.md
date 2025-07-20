@@ -91,26 +91,6 @@ RichMan is an online multiplayer Monopoly game that allows players to compete in
 - **Player management**: User authentication and game session handling
 - **Game mechanics**: Full Monopoly ruleset implementation
 - **Responsive design**: Works on desktop and mobile devices
-
-### 🧩 **MODULE STRUCTURE**
-```
-src/main/
-├── client/         # Frontend web application
-│   ├── components/ # Reusable UI components
-│   ├── pages/      # Game pages and screens
-│   ├── assets/     # Images, sounds, styles
-│   ├── utils/      # Client-side utilities
-│   └── api/        # API communication layer
-├── server/         # Backend Node.js application
-│   ├── routes/     # API routes and endpoints
-│   ├── controllers/# Business logic controllers
-│   ├── models/     # Data models and schemas
-│   ├── services/   # Game logic and services
-│   └── middleware/ # Authentication and validation
-└── shared/         # Shared code between client/server
-    ├── types/      # TypeScript type definitions
-    ├── constants/  # Game constants and enums
-    └── utils/      # Shared utility functions
 ```
 
 ### 🎯 **DEVELOPMENT STATUS**
