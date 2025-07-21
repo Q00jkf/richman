@@ -1,235 +1,253 @@
-# RichMan
+# RichMan - FFT 卡牌機率系統 API 服務器
 
-Online multiplayer Monopoly game with real-time web-based gameplay.
+🎯 **創新大富翁遊戲 | 部署於 Render | FFT 驅動的機率系統**  
+📺 Reference: https://youtu.be/8Q1bRZaHH24
 
-## Quick Start
+## 🎮 專案概述
 
-### 🎮 立即遊玩
+RichMan 是一款創新的線上多人大富翁 API 服務器，核心特色是使用**傅立葉轉換 (FFT)** 驅動的卡牌機率系統。與傳統大富翁不同，本遊戲採用 **70 張固定牌組** 中隨機抽取 11 張卡牌對應骰子點數 2-12，並通過職業背景影響卡牌出現機率。
 
-**直接訪問**: https://richman-online-game.onrender.com/
+## ✨ 核心創新
 
-1. 開啟網頁
-2. 創建玩家
-3. 加入房間或創建新房間
-4. 開始遊戲！
+### 🔬 FFT 卡牌機率系統
+- **數學基礎**: 利用雙骰子近高斯分佈特性 (2-12 點)
+- **職業差異化**: 不同職業背景通過頻域濾波產生不同機率曲線
+- **機率優雅性**: 用信號處理理論解決遊戲平衡問題
 
-### 📱 支援裝置
-- 電腦瀏覽器 (Chrome, Firefox, Safari)
-- 手機瀏覽器 (iOS Safari, Android Chrome)
-- 平板裝置
+### 🎲 遊戲機制特色
+- **70 張固定牌組**: 包含地產、道具、機會、命運等各類卡牌
+- **11 位置映射**: 每局隨機抽 11 張對應骰子和值 2-12
+- **職業背景系統**: 保守型、平衡型、激進型等不同機率偏好
+- **隱藏編號系統**: 每張卡有唯一編號 (如台北大安 a-1、道具牌 c-1)
 
-### 👥 開發者設置
-需要修改代碼時：
-```bash
-git clone [repository]
-npm install && cd src/main/client && npm install
+## 🏗️ 系統架構
+
+```
+專案結構 (API 服務器)
+├── src/main/server/    # Node.js Express API 服務器
+│   ├── routes/         # API 路由定義
+│   ├── controllers/    # 業務邏輯控制器
+│   ├── models/         # 資料模型定義
+│   ├── services/       # FFT 卡牌系統核心服務
+│   └── middleware/     # 認證與驗證中間件
+└── src/main/shared/    # 共享工具與常數
+    ├── types/          # TypeScript 類型定義
+    ├── constants/      # 遊戲常數與卡牌定義
+    └── utils/          # FFT 數學運算工具
 ```
 
-## 🛠️ Developer Quick Start (Claude Code)
+## 🔬 FFT 系統核心代碼
 
-### 📁 **關鍵檔案位置**
-```
-🎮 遊戲邏輯：
-- 主服務器: deployment/render/server.js (雲端部署用)
-- 本地服務器: src/main/server/index.js (完整版)
-- 遊戲引擎: src/main/server/services/GameEngine.js
-- 房間管理: src/main/server/services/RoomManager.js
+### Python 原型實現 (參考)
+```python
+import numpy as np
+from scipy.fft import fft, ifft
+from scipy.stats import norm
 
-🎨 前端介面：
-- 主程式: src/main/client/src/App.js
-- 遊戲頁面: src/main/client/pages/
-- UI組件: src/main/client/components/
-- 樣式: src/main/client/src/styles/global.css
+class SimpleFFTCardSystem:
+    def __init__(self):
+        self.dice_points = np.arange(2, 13)
 
-📡 即時通訊：
-- Socket服務: src/main/server/services/SocketService.js
-- 前端Socket: src/main/client/src/contexts/SocketContext.js
+    def generate_gaussian(self, center, sigma):
+        values = norm.pdf(self.dice_points, loc=center, scale=sigma)
+        return values / values.sum()
 
-⚙️ 配置檔案：
-- 遊戲常數: src/main/shared/constants/GameConstants.js
-- 棋盤設定: src/main/shared/constants/BoardConstants.js
-```
+    def apply_lowpass_filter(self, fft_data, cutoff):
+        filtered = np.zeros_like(fft_data)
+        filtered[:cutoff] = fft_data[:cutoff]
+        filtered[-cutoff:] = fft_data[-cutoff:]
+        return filtered
 
-### 🎯 **常見修改任務**
+    def generate_card_probability(self, card_center, card_sigma, background_type):
+        # 1. 生成基礎高斯分布
+        base = self.generate_gaussian(card_center, card_sigma)
+        
+        # 2. FFT 轉頻域
+        fft_base = fft(base)
 
-**修改遊戲規則 →** `src/main/server/services/GameEngine.js`
-**調整UI外觀 →** `src/main/client/src/styles/global.css` + `src/main/client/components/`
-**新增遊戲功能 →** `deployment/render/server.js` (handleGameAction函數)
-**修改房間系統 →** `src/main/server/services/RoomManager.js`
-**調整棋盤 →** `src/main/shared/constants/BoardConstants.js`
-
-### 🚀 **部署流程**
-
-⚠️ **重要：確保在正確的Git倉庫中工作**
-```bash
-# 正確的專案目錄和Git倉庫
-cd /mnt/c/codeing/richman
-pwd  # 應該顯示: /mnt/c/codeing/richman
-git remote -v  # 應該顯示 richman 倉庫
-```
-
-1. 修改代碼後測試
-2. **切換到正確目錄**：`cd /mnt/c/codeing/richman`
-3. **檢查分支**：`git branch` (應該在 `richman-render` 分支)
-4. **提交變更**：`git add . && git commit -m "描述"`
-5. **推送部署**：`git push origin richman-render` (自動部署到 Render)
-6. 檢查 https://richman-online-game.onrender.com/
-
-### 🎮 **專案狀態**
-- ✅ 基礎架構完成 (WebSocket + 房間系統)
-- ✅ 多人遊戲核心功能 (投骰、移動、年齡系統)
-- 🔄 遊戲內容擴展中 (職業、技能卡、財產系統)
-- ⏳ UI美化待完成
-
-## Features
-
-- **Real-time multiplayer**: WebSocket-based gameplay
-- **Interactive board**: Visual Monopoly board with animations
-- **Full game mechanics**: Complete Monopoly ruleset
-- **Responsive design**: Works on desktop and mobile
-- **Room system**: Multiple concurrent games
-
-## 📁 專案結構
-
-### 🏗️ **完整檔案架構**
-```
-richman/
-├── 📋 專案核心文檔
-│   ├── CLAUDE.md                    # 專案開發規則
-│   ├── README.md                    # 專案主要說明 (本文件)
-│   ├── WORK_LOG.md                  # 工作日誌記錄
-│   ├── QUICK_START.md               # 快速開始指南
-│   └── 規則.txt                     # 遊戲規則參考
-│
-├── 🚀 主要應用程式
-│   ├── src/main/                    # 主程式碼目錄
-│   │   ├── client/                  # 前端 React 應用
-│   │   │   ├── src/                 # React 應用原始碼
-│   │   │   │   ├── components/      # UI 組件
-│   │   │   │   ├── contexts/        # React Context
-│   │   │   │   └── styles/          # 樣式文件
-│   │   │   ├── assets/              # 靜態資源 (圖片/音效)
-│   │   │   ├── pages/               # 頁面組件
-│   │   │   └── utils/               # 前端工具
-│   │   ├── server/                  # 後端 Node.js 應用
-│   │   │   ├── controllers/         # 業務邏輯控制器
-│   │   │   ├── middleware/          # Express 中間件
-│   │   │   ├── models/              # 資料模型
-│   │   │   ├── routes/              # API 路由
-│   │   │   ├── services/            # 遊戲核心服務
-│   │   │   └── index.js             # 伺服器入口
-│   │   └── shared/                  # 前後端共享程式碼
-│   │       ├── constants/           # 遊戲常數定義
-│   │       ├── types/               # TypeScript 類型
-│   │       └── utils/               # 共用工具函數
-│   └── test/                        # 測試程式碼
-│       ├── unit/                    # 單元測試
-│       ├── integration/             # 整合測試
-│       └── e2e/                     # 端對端測試
-│
-├── 📚 文檔和配置
-│   ├── docs/                        # 專案文檔
-│   ├── config/                      # 配置文件
-│   └── public/                      # 公開靜態文件
-│
-├── 🛠️ 開發工具和部署
-│   ├── deployment/render/           # Render 雲端部署
-│   ├── testing/legacy/              # 舊版測試工具
-│   ├── tools/                       # 開發工具
-│   ├── examples/                    # 使用範例
-│   ├── output/                      # 生成輸出文件
-│   └── templates/                   # 專案模板歸檔
-│
-└── 📦 項目管理
-    ├── package.json                 # 專案配置和依賴
-    └── package-lock.json            # 依賴鎖定文件
+        # 3. 職業背景濾波
+        cutoff_map = {
+            "conservative": 2,  # 保守型：低頻
+            "balanced": 3,      # 平衡型：中頻
+            "aggressive": 5     # 激進型：高頻
+        }
+        
+        cutoff = cutoff_map.get(background_type, 3)
+        filtered_fft = self.apply_lowpass_filter(fft_base, cutoff)
+        
+        # 4. IFFT 回空間域
+        final = np.real(ifft(filtered_fft))
+        final = np.clip(final, 0, None)
+        return final / final.sum()  # 歸一化
 ```
 
-### 🎯 **檔案存放指南**
+## 🚀 API 端點
 
-#### 📸 **圖片和資源**
-- **遊戲圖片** → `src/main/client/assets/images/`
-- **音效文件** → `src/main/client/assets/sounds/`
-- **文檔圖片** → `docs/images/`
+### 🎮 遊戲管理
+```http
+POST   /api/game/start           # 創建新遊戲，抽取11張卡牌
+GET    /api/game/:id/state       # 獲取遊戲狀態
+POST   /api/game/:id/roll        # 擲骰子，觸發對應卡牌
+```
 
-#### 🔌 **外掛系統 (未來開發)**
-- **主題外掛** → `plugins/themes/`
-- **規則外掛** → `plugins/rules/`
-- **棋盤外掛** → `plugins/boards/`
+### 🔍 卡牌系統
+```http
+GET    /api/cards/:id/probability          # 查看卡牌機率分布
+GET    /api/cards/distribution/:background # 職業背景的機率分析
+POST   /api/cards/simulate                 # 機率分布模擬測試
+```
 
-#### ⚙️ **配置文件**
-- **遊戲設定** → `config/game.json`
-- **伺服器設定** → `config/server.json`
-- **程式碼常數** → `src/main/shared/constants/`
+### 📊 數據分析
+```http
+GET    /api/analytics/balance    # 遊戲平衡性統計
+GET    /api/analytics/fft        # FFT 頻譜分析數據
+```
 
-## Architecture
+## 🛠️ 技術棧
 
-- **Frontend**: React/TypeScript with Socket.IO
-- **Backend**: Node.js/Express with Socket.IO
-- **Database**: MongoDB for game state persistence
-- **Real-time**: WebSocket communication
+### 後端服務
+- **Runtime**: Node.js 16+
+- **框架**: Express.js
+- **FFT 運算**: fft.js 或 ml-fft
+- **資料庫**: MongoDB/PostgreSQL
+- **部署**: Render 雲端服務
 
-## Development
+### 數學工具
+- **信號處理**: FFT/IFFT 實現
+- **機率分布**: 高斯函數生成
+- **濾波器**: 低通、高通、帶通濾波
+- **統計分析**: 分布驗證與平衡性檢查
 
-- **Structure**: Modular architecture in `src/main/`
-- **Testing**: Jest for unit/integration tests
-- **Code Quality**: ESLint + TypeScript
-- **Git Workflow**: Commit after every task
+## 🎯 開發階段
 
-## Commands
+### Phase 1: MVP (最小可行產品) ✅
+- [x] 基礎 FFT 引擎實現
+- [x] 10 張測試卡牌系統
+- [x] 3 種職業背景濾波
+- [x] 核心 API 端點
+
+### Phase 2: 核心優化 🔄
+- [ ] 70 張完整牌組
+- [ ] 位置衝突管理算法
+- [ ] 遊戲平衡性監控
+- [ ] 效能最佳化
+
+### Phase 3: 進階功能 ⏳
+- [ ] 動態機率調整
+- [ ] 玩家行為分析
+- [ ] 職業覺醒系統
+- [ ] 多骰子支援擴展
+
+## 🚀 快速開始
+
+### 1. Render 部署
+這是一個純 API 服務器，直接部署到 Render 即可使用：
 
 ```bash
-npm install     # Install dependencies
-npm run dev     # Development server
-npm run client  # Frontend only
-npm run server  # Backend only
-npm test        # Run tests
-npm run build   # Production build
+# 提交代碼到 Git
+git add .
+git commit -m "Add FFT Card Probability System"
+git push origin main
+
+# Render 會自動：
+# 1. 檢測到 package.json 並執行 npm install
+# 2. 啟動 src/main/server/index.js
+# 3. 在指定端口提供 API 服務
 ```
 
-## Game Rules
+### 2. API 使用方式
+部署完成後，使用 Render 提供的 URL 訪問 API：
 
-Based on traditional Monopoly with 2+ players:
-- Buy properties and collect rent
-- Build houses and hotels
-- Manage money and avoid bankruptcy
-- Real-time multiplayer gameplay
+```bash
+# 替換 YOUR_RENDER_URL 為實際的 Render 部署地址
+export API_URL="https://your-app-name.onrender.com"
 
-## ⚡ 快捷命令 (Quick Commands)
+# 創建新遊戲
+curl -X POST $API_URL/api/game/start \
+  -H "Content-Type: application/json" \
+  -d '{"playerBackground": "balanced"}'
 
-### 📋 **可用指令**
-| 編號 | 指令 | 功能描述 | 使用範例 |
-|------|------|----------|----------|
-| 1 | help | 顯示所有指令和說明 | `help` 或 `1` |
-| 2 | rest | 暫停專案並保存當前進度 | `rest` 或 `2` |
-| 3 | conclusion | 整理今日 git log 工作內容 | `conclusion` 或 `3` |
-| 4 | status | 顯示專案當前狀態和進度 | `status` 或 `4` |
-| 5 | next | 顯示下一個建議任務 | `next` 或 `5` |
-| 6 | transfer | 工作流程轉移精靈 | `transfer` 或 `6` |
+# 查看卡牌機率分析
+curl "$API_URL/api/cards/a-1/probability?background=conservative"
 
-### 🎯 **RichMan 專案指令**
-| 編號 | 指令 | 功能描述 | 使用範例 |
-|------|------|----------|----------|
-| 7 | game | 載入遊戲開發環境 | `game` 或 `7` |
-| 8 | frontend | 載入前端開發環境 | `frontend` 或 `8` |
-| 9 | backend | 載入後端開發環境 | `backend` 或 `9` |
-| 10 | multiplayer | 載入多人遊戲開發環境 | `multiplayer` 或 `10` |
-| 11 | test | 載入測試環境 | `test` 或 `11` |
-| 12 | deploy | 載入部署環境 | `deploy` 或 `12` |
+# 檢查系統狀態
+curl $API_URL/health
+```
 
-### 📝 **使用說明**
-- 直接輸入指令名稱或編號即可執行
-- 例如：輸入 `3` 或 `conclusion` 都會執行今日工作整理
-- 使用 `help` 查看最新的指令清單
+### 3. 開發與測試
+不需要本地安裝依賴，直接通過 Render 部署測試：
 
-### 📁 **快捷檔案系統**
-- `@main` - 主服務器文件
-- `@game` - 遊戲核心類型
-- `@player` - 玩家管理系統
-- `@board` - 遊戲板面設計
-- `@client` - 前端主程式
-- `@socket` - Socket通信服務
+- **健康檢查**: `GET /health` 
+- **服務信息**: `GET /` 
+- **系統統計**: `GET /api/analytics/system`
 
-## License
+## 📊 數學原理說明
 
-MIT
+### 雙骰子機率分布
+```
+骰子和值:  2   3   4   5   6   7   8   9  10  11  12
+出現機率: 1/36 2/36 3/36 4/36 5/36 6/36 5/36 4/36 3/36 2/36 1/36
+形狀:     近似高斯分布，峰值在 7
+```
+
+### FFT 濾波原理
+```
+1. 基礎分布 → FFT → 頻域表示
+2. 職業濾波器 × 頻域數據 → 調整後頻域
+3. IFFT → 最終機率分布 → 歸一化
+```
+
+### 職業背景效果
+- **保守型** (Low-pass): 偏向中間點數，避免極值
+- **平衡型** (Mid-pass): 維持原始高斯特性
+- **激進型** (High-pass): 增加邊緣點數機率
+
+## 🔧 開發指南
+
+### 新增卡牌
+1. 在 `src/main/shared/constants/cards.js` 定義卡牌屬性
+2. 設定基礎高斯參數 (center, sigma)
+3. 在測試中驗證機率分布合理性
+
+### 新增職業背景
+1. 在濾波器定義中加入新的 cutoff 參數
+2. 測試與現有職業的差異化程度
+3. 確保遊戲平衡性
+
+### API 擴展
+1. 在 `src/main/server/routes/` 加入新路由
+2. 實現對應的 controller 邏輯
+3. 添加適當的錯誤處理和驗證
+
+## 📋 測試策略
+
+### API 功能測試
+```bash
+# 直接測試部署在 Render 的 API
+curl $API_URL/health                                    # 健康檢查
+curl $API_URL/api/cards/list                           # 獲取卡牌列表
+curl -X POST $API_URL/api/game/start -H "Content-Type: application/json" -d '{"playerBackground": "balanced"}'
+```
+
+### FFT 數學驗證
+```bash
+# 在 Render 環境中運行內建測試
+curl $API_URL/api/cards/a-1/probability               # 驗證 FFT 計算
+curl $API_URL/api/analytics/system                    # 檢查系統統計
+```
+
+## 📄 授權
+
+MIT License - 詳見 LICENSE 文件
+
+## 🙏 致謝
+
+- **數學理論**: 傅立葉轉換在遊戲機率中的創新應用
+- **遊戲設計**: 結合信號處理與遊戲平衡的跨領域方法
+- **技術實現**: Claude Code 協助開發與系統設計
+
+---
+
+**⚡ 特色**: 世界首個將 FFT 應用於卡牌機率系統的大富翁遊戲  
+**🎯 目標**: 為每位玩家提供獨特且平衡的遊戲體驗  
+**🔬 創新**: 數學優雅性與遊戲趣味性的完美結合

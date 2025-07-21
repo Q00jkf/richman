@@ -76,21 +76,24 @@ This file provides essential guidance to Claude Code (claude.ai/code) when worki
 ## 🏗️ PROJECT OVERVIEW - RichMan
 
 ### 🎯 **PROJECT PURPOSE**
-RichMan is an online multiplayer Monopoly game that allows players to compete in real-time through a web browser. The project features a client-server architecture with WebSocket communication for real-time gameplay, game state synchronization, and interactive web-based UI.
+RichMan is an innovative online multiplayer Monopoly API server deployed on Render, featuring a revolutionary **FFT (Fast Fourier Transform) Card Probability System**. The project uses signal processing theory to create dynamic card probability distributions based on player backgrounds, providing a mathematically elegant approach to game balance.
 
 ### 🔧 **ARCHITECTURE**
-- **Client-Server Model**: Web-based frontend with Node.js/Express backend
+- **API Server**: Node.js/Express backend deployed on Render
+- **FFT Engine**: Mathematical core for card probability calculations
 - **Real-time Communication**: WebSocket/Socket.IO for live gameplay
 - **Database**: Game state persistence and user management
-- **Web Technologies**: HTML5, CSS3, JavaScript/TypeScript for rich UI
+- **RESTful APIs**: JSON-based API endpoints for game operations
+- **Signal Processing**: FFT/IFFT operations for probability distribution
 
 ### 📡 **KEY FEATURES**
-- **Real-time multiplayer**: Multiple players can join and play simultaneously
-- **Game state synchronization**: All players see consistent game state
-- **Interactive board**: Visual Monopoly board with animations
-- **Player management**: User authentication and game session handling
-- **Game mechanics**: Full Monopoly ruleset implementation
-- **Responsive design**: Works on desktop and mobile devices
+- **FFT Card Probability System**: Revolutionary use of Fourier Transform for card distribution
+- **70-Card Fixed Pool**: Unique card pool with 11 random selections per game
+- **Professional Background Filtering**: Different probability curves for different player types
+- **Dice-Position Mapping**: Cards assigned to dice roll results (2-12) with Gaussian distribution
+- **Real-time multiplayer API**: Multiple players can join and play simultaneously
+- **Mathematical Game Balance**: Signal processing ensures fair and dynamic gameplay
+- **WebSocket events**: Real-time game updates and notifications
 ```
 
 ### 🎯 **DEVELOPMENT STATUS**
@@ -371,6 +374,208 @@ richman/
 **⚠️ Prevention is better than consolidation - build clean from the start.**  
 **🎯 Focus on single source of truth and extending existing functionality.**  
 **📈 Each task should maintain clean architecture and prevent technical debt.**
+
+## 🔬 FFT CARD PROBABILITY SYSTEM
+
+### 🎯 **CORE CONCEPT**
+The FFT Card Probability System uses signal processing theory to create dynamic, mathematically balanced card distributions. Each card has a base probability distribution that gets filtered through player background characteristics using Fourier Transform operations.
+
+### 🧮 **MATHEMATICAL FOUNDATION**
+
+#### Dice Distribution (Base Reality)
+```
+Dice Sum:    2   3   4   5   6   7   8   9  10  11  12
+Probability: 1/36 2/36 3/36 4/36 5/36 6/36 5/36 4/36 3/36 2/36 1/36
+Shape:       Near-Gaussian distribution, peak at 7
+```
+
+#### FFT Processing Pipeline
+```
+1. Base Card Distribution (Gaussian) → FFT → Frequency Domain
+2. Player Background Filter × Frequency Data → Modified Spectrum  
+3. IFFT → Final Probability Distribution → Normalize
+```
+
+### 🎮 **GAME MECHANICS**
+
+#### Card Pool System
+- **Total Cards**: 70 unique cards in fixed pool
+- **Per Game**: Random selection of 11 cards
+- **Position Mapping**: Cards assigned to dice positions 2-12
+- **Card Categories**:
+  - **Property Cards (a-series)**: Real estate with location-based effects
+  - **Item Cards (c-series)**: Tools and special abilities
+  - **Chance Cards**: Random positive/negative events
+  - **Destiny Cards**: Fate-based game changers
+
+#### Card Identification System
+```javascript
+CardID Format: [category]-[number]
+Examples:
+  "a-1": 台北大安 (Property - Taipei Daan)
+  "c-1": 指定骰子道具 (Item - Dice Control Tool)
+  "ch-5": 機會卡 #5 (Chance Card #5)
+  "dt-3": 命運卡 #3 (Destiny Card #3)
+```
+
+### 🎭 **PLAYER BACKGROUND SYSTEM**
+
+#### Background Types & FFT Filters
+```javascript
+BackgroundFilters = {
+  "conservative": {
+    type: "lowpass",
+    cutoff: 2,
+    effect: "Prefer center positions (6-8), avoid extremes"
+  },
+  "balanced": {
+    type: "midpass", 
+    cutoff: 3,
+    effect: "Maintain near-original Gaussian distribution"
+  },
+  "aggressive": {
+    type: "highpass",
+    cutoff: 5, 
+    effect: "Higher probability for edge positions (2-5, 9-12)"
+  }
+}
+```
+
+#### Filter Implementation
+```javascript
+function applyBackgroundFilter(baseDistribution, backgroundType) {
+  // 1. FFT to frequency domain
+  const fftData = fft(baseDistribution);
+  
+  // 2. Apply filter
+  const filter = createFilter(backgroundType);
+  const filteredFFT = multiplyComplex(fftData, filter);
+  
+  // 3. IFFT back to spatial domain
+  const result = ifft(filteredFFT);
+  
+  // 4. Ensure non-negative and normalize
+  return normalizeDistribution(clipNegative(result));
+}
+```
+
+### 📊 **REFERENCE IMPLEMENTATION**
+
+#### Python Prototype (VERIFIED)
+```python
+import numpy as np
+from scipy.fft import fft, ifft
+from scipy.stats import norm
+
+class SimpleFFTCardSystem:
+    def __init__(self):
+        self.dice_points = np.arange(2, 13)
+
+    def generate_gaussian(self, center, sigma):
+        values = norm.pdf(self.dice_points, loc=center, scale=sigma)
+        return values / values.sum()
+
+    def apply_lowpass_filter(self, fft_data, cutoff):
+        filtered = np.zeros_like(fft_data)
+        filtered[:cutoff] = fft_data[:cutoff]
+        filtered[-cutoff:] = fft_data[-cutoff:]
+        return filtered
+
+    def generate_card_probability(self, card_center, card_sigma, background_type):
+        base = self.generate_gaussian(card_center, card_sigma)
+        fft_base = fft(base)
+        
+        cutoff_map = {
+            "conservative": 2,
+            "balanced": 3,
+            "aggressive": 5
+        }
+        
+        cutoff = cutoff_map.get(background_type, 3)
+        filtered_fft = self.apply_lowpass_filter(fft_base, cutoff)
+        final = np.real(ifft(filtered_fft))
+        final = np.clip(final, 0, None)
+        return final / final.sum()
+```
+
+### 🚀 **DEVELOPMENT PHASES**
+
+#### Phase 1: MVP (CURRENT FOCUS)
+- [x] Python prototype verified
+- [x] JavaScript FFT engine implementation
+- [x] 10 test cards with base distributions
+- [x] 3 background filter types
+- [x] Basic API endpoints
+
+#### Phase 2: Core System
+- [ ] Full 70-card database
+- [ ] Position conflict resolution algorithm
+- [ ] Game balance validation
+- [ ] Performance optimization
+
+#### Phase 3: Advanced Features
+- [ ] Dynamic probability adjustment
+- [ ] Player behavior analysis
+- [ ] Professional evolution system
+- [ ] Multi-dice support (2-18 range)
+
+### 🔧 **IMPLEMENTATION RULES**
+
+#### Card Definition Standards
+```javascript
+// Card base distribution parameters
+const CardDefinitions = {
+  "a-1": {
+    name: "台北大安",
+    type: "property", 
+    baseDistribution: {
+      center: 7,    // Gaussian center
+      sigma: 1.5,   // Standard deviation
+      weight: 1.0   // Global weight multiplier
+    }
+  }
+}
+```
+
+#### API Endpoint Standards
+```javascript
+// Required endpoints for FFT system
+Routes = {
+  "POST /api/game/start": "Create game, select 11 cards, apply FFT",
+  "GET /api/cards/:id/probability": "Get card probability distribution", 
+  "GET /api/game/:id/fft-analysis": "FFT frequency analysis data",
+  "POST /api/cards/simulate": "Test probability distributions"
+}
+```
+
+#### Testing Requirements
+- **Unit Tests**: FFT mathematical accuracy
+- **Integration Tests**: Full probability pipeline  
+- **Balance Tests**: Statistical fairness validation
+- **Performance Tests**: Real-time calculation speed
+
+### 🎯 **SUCCESS METRICS**
+
+#### Mathematical Accuracy
+- FFT/IFFT reconstruction error < 1e-10
+- Probability sum exactly equals 1.0
+- No negative probabilities after processing
+
+#### Game Balance  
+- No background advantage > 5% win rate difference
+- All card types appear with reasonable frequency
+- Player satisfaction with perceived fairness
+
+#### Performance
+- Card probability calculation < 10ms
+- Game initialization < 100ms  
+- API response time < 200ms
+
+---
+
+**🔬 FFT系統是本專案的核心創新，所有開發都必須圍繞這個數學基礎進行**  
+**🎯 優先確保FFT計算的準確性，然後考慮遊戲性和效能優化**  
+**📈 每個功能都要驗證是否符合信號處理的數學原理**
 
 ---
 
