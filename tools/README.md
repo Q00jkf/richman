@@ -81,7 +81,7 @@ node tools/test-websocket.js multi
 ### 成功啟動標誌
 ```
 🚀 RichMan Server running on port 5000
-📱 Client URL: http://localhost:3000
+📱 Client URL: https://richman-online-game.onrender.com
 🎮 Game Manager initialized
 👥 Player Manager initialized
 🏠 Room Manager initialized
@@ -146,7 +146,7 @@ DEBUG=* npm run server
 npm install -g artillery
 
 # 執行壓力測試
-artillery quick --count 50 --num 10 http://localhost:5000/health
+artillery quick --count 50 --num 10 https://richman-online-game.onrender.com/health
 ```
 
 ## 🔧 自定義測試
@@ -166,7 +166,7 @@ class CustomTester extends APITester {
 ### 測試配置
 ```javascript
 // 修改測試參數
-const tester = new GameTester('http://localhost:5001');
+const tester = new GameTester('https://richman-online-game.onrender.com');
 tester.playerCount = 6; // 測試 6 人遊戲
 ```
 

@@ -1,7 +1,7 @@
 # 🔧 WebSocket 測試問題修復
 
 ## ❌ **問題說明**
-當您在瀏覽器 Console 中執行 `const socket = io('http://localhost:5000');` 時出現錯誤：
+當您在瀏覽器 Console 中執行 `const socket = io('https://richman-online-game.onrender.com');` 時出現錯誤：
 ```
 Uncaught ReferenceError: io is not defined
 ```
@@ -31,7 +31,7 @@ Uncaught ReferenceError: io is not defined
 
 1. **訪問主頁面**：
    ```
-   http://localhost:5000
+   https://richman-online-game.onrender.com
    ```
 
 2. **按 F12 開啟開發者工具**
@@ -39,7 +39,7 @@ Uncaught ReferenceError: io is not defined
 3. **在 Console 中執行**：
    ```javascript
    // 現在這個命令可以正常工作了！
-   const socket = io('http://localhost:5000');
+   const socket = io('https://richman-online-game.onrender.com');
    
    // 測試連接
    socket.on('connect', () => {

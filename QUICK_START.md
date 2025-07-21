@@ -13,7 +13,7 @@ npm run server
 **預期看到**：
 ```
 🚀 RichMan Server running on port 5000
-📱 Client URL: http://localhost:3000
+📱 Client URL: https://richman-online-game.onrender.com
 🎮 Game Manager initialized
 👥 Player Manager initialized
 🏠 Room Manager initialized
@@ -66,13 +66,13 @@ npm run test:websocket
    - 點擊「擲骰子」進行遊戲
 
 **選項 B: 使用主頁面開發者工具**
-1. 開啟瀏覽器，訪問 `http://localhost:5000`
+1. 開啟瀏覽器，訪問 `https://richman-online-game.onrender.com`
 2. 按 F12 開啟開發者工具
 3. 在 Console 中執行以下代碼：
 
 ```javascript
 // 建立連接
-const socket = io('http://localhost:5000');
+const socket = io('https://richman-online-game.onrender.com');
 
 // 監聽連接成功
 socket.on('connect', () => {
@@ -171,7 +171,7 @@ socket.onAny((eventName, ...args) => {
 🧪 RichMan API 測試工具
 ======================
 
-📡 測試目標: http://localhost:5000
+📡 測試目標: https://richman-online-game.onrender.com
 
 🔍 測試健康檢查...
 ✅ 健康檢查成功

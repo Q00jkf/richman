@@ -34,7 +34,7 @@ npm install
 npm start
 
 # 開啟瀏覽器
-open http://localhost:5000
+open https://richman-online-game.onrender.com
 ```
 
 ## 🌐 Render 部署步驟
@@ -60,7 +60,7 @@ open http://localhost:5000
 
 4. **完成部署**
    - 等待部署完成
-   - 獲得網址: `https://your-app-name.onrender.com`
+   - 獲得網址: `https://richman-online-game.onrender.com`
 
 ## 🎮 使用方式
 

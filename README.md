@@ -159,8 +159,8 @@ git push origin main
 部署完成後，使用 Render 提供的 URL 訪問 API：
 
 ```bash
-# 替換 YOUR_RENDER_URL 為實際的 Render 部署地址
-export API_URL="https://your-app-name.onrender.com"
+# RichMan FFT API 服務器地址
+export API_URL="https://richman-online-game.onrender.com"
 
 # 創建新遊戲
 curl -X POST $API_URL/api/game/start \
@@ -224,16 +224,16 @@ curl $API_URL/health
 ### API 功能測試
 ```bash
 # 直接測試部署在 Render 的 API
-curl $API_URL/health                                    # 健康檢查
-curl $API_URL/api/cards/list                           # 獲取卡牌列表
-curl -X POST $API_URL/api/game/start -H "Content-Type: application/json" -d '{"playerBackground": "balanced"}'
+curl https://richman-online-game.onrender.com/health                                    # 健康檢查
+curl https://richman-online-game.onrender.com/api/cards/list                           # 獲取卡牌列表
+curl -X POST https://richman-online-game.onrender.com/api/game/start -H "Content-Type: application/json" -d '{"playerBackground": "balanced"}'
 ```
 
 ### FFT 數學驗證
 ```bash
 # 在 Render 環境中運行內建測試
-curl $API_URL/api/cards/a-1/probability               # 驗證 FFT 計算
-curl $API_URL/api/analytics/system                    # 檢查系統統計
+curl https://richman-online-game.onrender.com/api/cards/a-1/probability               # 驗證 FFT 計算
+curl https://richman-online-game.onrender.com/api/analytics/system                    # 檢查系統統計
 ```
 
 ## 📄 授權

@@ -317,7 +317,7 @@ npm run server
 ### 環境變數
 ```env
 PORT=5000
-CLIENT_URL=http://localhost:3000
+CLIENT_URL=https://richman-online-game.onrender.com
 JWT_SECRET=your-secret-key
 MONGODB_URI=mongodb://localhost:27017/richman
 ```
@@ -473,10 +473,10 @@ const debugGameState = () => {
 ### 壓力測試
 ```bash
 # API 壓力測試
-ab -n 1000 -c 10 http://localhost:5000/api/rooms
+ab -n 1000 -c 10 https://richman-online-game.onrender.com/api/rooms
 
 # Socket 連接測試
-artillery quick --count 10 --num 50 http://localhost:5000
+artillery quick --count 10 --num 50 https://richman-online-game.onrender.com
 ```
 
 ---

@@ -44,7 +44,7 @@ npm install
 ```bash
 # 在專案根目錄創建 .env 文件
 echo "PORT=5000" > .env
-echo "CLIENT_URL=http://localhost:3000" >> .env
+echo "CLIENT_URL=https://richman-online-game.onrender.com" >> .env
 echo "NODE_ENV=development" >> .env
 ```
 
@@ -68,7 +68,7 @@ npx nodemon src/main/server/index.js
 **預期輸出**：
 ```
 🚀 RichMan Server running on port 5000
-📱 Client URL: http://localhost:3000
+📱 Client URL: https://richman-online-game.onrender.com
 🎮 Game Manager initialized
 👥 Player Manager initialized
 🏠 Room Manager initialized
@@ -80,10 +80,10 @@ npx nodemon src/main/server/index.js
 打開瀏覽器或使用 curl：
 ```bash
 # 瀏覽器訪問
-http://localhost:5000/health
+https://richman-online-game.onrender.com/health
 
 # 或使用 curl
-curl http://localhost:5000/health
+curl https://richman-online-game.onrender.com/health
 ```
 
 **預期回應**：
@@ -107,7 +107,7 @@ curl http://localhost:5000/health
 
 #### 創建玩家
 ```bash
-curl -X POST http://localhost:5000/api/players \
+curl -X POST https://richman-online-game.onrender.com/api/players \
   -H "Content-Type: application/json" \
   -d '{
     "name": "測試玩家1",
@@ -117,14 +117,14 @@ curl -X POST http://localhost:5000/api/players \
 
 #### 獲取玩家列表
 ```bash
-curl http://localhost:5000/api/players
+curl https://richman-online-game.onrender.com/api/players
 ```
 
 ### 2. 房間 API 測試
 
 #### 創建遊戲房間
 ```bash
-curl -X POST http://localhost:5000/api/rooms \
+curl -X POST https://richman-online-game.onrender.com/api/rooms \
   -H "Content-Type: application/json" \
   -d '{
     "name": "測試房間",
@@ -139,14 +139,14 @@ curl -X POST http://localhost:5000/api/rooms \
 
 #### 獲取房間列表
 ```bash
-curl http://localhost:5000/api/rooms
+curl https://richman-online-game.onrender.com/api/rooms
 ```
 
 ### 3. 遊戲 API 測試
 
 #### 獲取遊戲列表
 ```bash
-curl http://localhost:5000/api/games
+curl https://richman-online-game.onrender.com/api/games
 ```
 
 ---
@@ -155,11 +155,11 @@ curl http://localhost:5000/api/games
 
 ### 1. 使用瀏覽器控制台測試
 
-在瀏覽器打開 `http://localhost:5000`，按 F12 開啟開發者工具，在 Console 中執行：
+在瀏覽器打開 `https://richman-online-game.onrender.com`，按 F12 開啟開發者工具，在 Console 中執行：
 
 ```javascript
 // 1. 建立 WebSocket 連接
-const socket = io('http://localhost:5000');
+const socket = io('https://richman-online-game.onrender.com');
 
 // 2. 監聽連接事件
 socket.on('connect', () => {
@@ -193,7 +193,7 @@ socket.emit('player:join', {
 ```javascript
 const io = require('socket.io-client');
 
-const socket = io('http://localhost:5000');
+const socket = io('https://richman-online-game.onrender.com');
 
 socket.on('connect', () => {
   console.log('✅ WebSocket 連接成功');
@@ -229,14 +229,14 @@ node testing/legacy/test-websocket.js
 #### 步驟 1: 創建玩家和房間
 ```bash
 # 創建玩家
-curl -X POST http://localhost:5000/api/players \
+curl -X POST https://richman-online-game.onrender.com/api/players \
   -H "Content-Type: application/json" \
   -d '{"name": "玩家1", "avatar": "avatar1.png"}'
 
 # 記住返回的 playerId，例如: "player_123"
 
 # 創建房間
-curl -X POST http://localhost:5000/api/rooms \
+curl -X POST https://richman-online-game.onrender.com/api/rooms \
   -H "Content-Type: application/json" \
   -d '{"name": "測試房間", "maxPlayers": 4}'
 
@@ -245,7 +245,7 @@ curl -X POST http://localhost:5000/api/rooms \
 
 #### 步驟 2: 使用 WebSocket 加入房間
 ```javascript
-const socket = io('http://localhost:5000');
+const socket = io('https://richman-online-game.onrender.com');
 
 socket.on('connect', () => {
   // 加入房間
@@ -312,7 +312,7 @@ socket.on('game:house_built', (data) => {
 
 **玩家 1 (主機)**：
 ```javascript
-const socket1 = io('http://localhost:5000');
+const socket1 = io('https://richman-online-game.onrender.com');
 
 socket1.on('connect', () => {
   // 創建並加入房間
@@ -335,7 +335,7 @@ socket1.on('room:created', (data) => {
 
 **玩家 2-4**：
 ```javascript
-const socket2 = io('http://localhost:5000');
+const socket2 = io('https://richman-online-game.onrender.com');
 
 socket2.on('connect', () => {
   // 加入現有房間
