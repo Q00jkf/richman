@@ -209,18 +209,18 @@ class GameService {
     }
     
     /**
-     * Randomly select cards from the available pool
+     * Randomly select cards from the available pool (with replacement for testing)
      * @param {number} count - Number of cards to select
      * @returns {string[]} - Array of selected card IDs
      */
     selectRandomCards(count) {
         const allCardIds = getAllCardIds();
         const selected = [];
-        const available = [...allCardIds];
         
-        for (let i = 0; i < Math.min(count, available.length); i++) {
-            const randomIndex = Math.floor(Math.random() * available.length);
-            selected.push(available.splice(randomIndex, 1)[0]);
+        // For testing phase: allow card reuse if needed
+        for (let i = 0; i < count; i++) {
+            const randomIndex = Math.floor(Math.random() * allCardIds.length);
+            selected.push(allCardIds[randomIndex]);
         }
         
         return selected;

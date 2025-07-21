@@ -2,7 +2,7 @@
   "name": "richman",
   "version": "1.0.0",
   "description": "Online multiplayer Monopoly game with real-time gameplay",
-  "main": "server.js",
+  "main": "src/main/server/index.js",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "nodemon src/main/server/index.js",
@@ -19,8 +19,7 @@
     "test:functional": "npm run test:api && npm run test:websocket",
     "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint src/ --ext .js,.jsx,.ts,.tsx --fix",
-    "start": "node server.js",
-    "start:render": "node server.js",
+    "start": "node src/main/server/index.js",
     "restart": "bash auto-restart.sh",
     "restart:win": "auto-restart.bat",
     "quick-restart": "pkill -f nodemon && sleep 2 && npm run server"
