@@ -16,6 +16,7 @@ import { SocketProvider } from './contexts/SocketContext';
 import { GameProvider } from './contexts/GameContext';
 import { PlayerProvider } from './contexts/PlayerContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { FFTProvider } from './contexts/FFTContext';
 
 // Toast notifications
 import { Toaster } from 'react-hot-toast';
@@ -29,8 +30,9 @@ root.render(
         <PlayerProvider>
           <SocketProvider>
             <GameProvider>
-              <App />
-              <Toaster
+              <FFTProvider>
+                <App />
+                <Toaster
                 position="top-right"
                 toastOptions={{
                   duration: 4000,
@@ -52,7 +54,8 @@ root.render(
                     },
                   },
                 }}
-              />
+                />
+              </FFTProvider>
             </GameProvider>
           </SocketProvider>
         </PlayerProvider>

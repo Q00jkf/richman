@@ -28,6 +28,7 @@ import LoginPage from './pages/LoginPage';
 import LobbyPage from './pages/LobbyPage';
 import RoomPage from './pages/RoomPage';
 import GamePage from './pages/GamePage';
+import FFTGamePage from './pages/FFTGamePage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import HelpPage from './pages/HelpPage';
@@ -205,6 +206,7 @@ function App() {
                   element={isAuthenticated ? <Navigate to="/lobby" replace /> : <LoginPage />} 
                 />
                 <Route path="/help" element={<HelpPage />} />
+                <Route path="/fft" element={<FFTGamePage />} />
                 
                 {/* Protected routes */}
                 <Route 
