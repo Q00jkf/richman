@@ -1,6 +1,7 @@
 # RichMan - FFT 卡牌機率系統 API 服務器
 
 🎯 **創新大富翁遊戲 | 部署於 Render | FFT 驅動的機率系統**  
+遊戲不屬於RENDER，遊戲網址:https://richman-online-game.onrender.com
 📺 Reference: https://youtu.be/8Q1bRZaHH24
 
 ## 🎮 專案概述
