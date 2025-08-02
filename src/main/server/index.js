@@ -28,6 +28,190 @@ const io = socketIo(server, {
 // Initialize services
 const gameService = new GameService();
 
+// 房間管理系統
+class SimpleRoomManager {
+    constructor() {
+        this.rooms = new Map();
+        this.players = new Map();
+        console.log('🏠 Room Manager initialized');
+    }
+
+    createRoom(hostPlayer, roomSettings = {}) {
+        const roomId = `room_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const room = {
+            id: roomId,
+            name: roomSettings.name || `${hostPlayer.name}的房間`,
+            hostId: hostPlayer.id,
+            players: [hostPlayer.id],
+            playerDetails: new Map([[hostPlayer.id, {
+                id: hostPlayer.id,
+                name: hostPlayer.name,
+                avatar: hostPlayer.avatar || 'default',
+                isReady: false,
+                isHost: true,
+                joinedAt: new Date()
+            }]]),
+            maxPlayers: roomSettings.maxPlayers || 4,
+            status: 'waiting',
+            settings: {
+                startingMoney: roomSettings.startingMoney || 1500,
+                maxPlayers: roomSettings.maxPlayers || 4,
+                isPrivate: roomSettings.isPrivate || false,
+                password: roomSettings.password || null
+            },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        this.rooms.set(roomId, room);
+        console.log(`✅ 房間創建: ${room.name} (${roomId}) by ${hostPlayer.name}`);
+        return { success: true, room: this.getRoomPublicInfo(room) };
+    }
+
+    getRoomPublicInfo(room) {
+        if (!room) return null;
+        return {
+            id: room.id,
+            name: room.name,
+            hostId: room.hostId,
+            status: room.status,
+            playerCount: room.players.length,
+            maxPlayers: room.settings.maxPlayers,
+            players: room.players.map(playerId => {
+                const player = this.players.get(playerId);
+                const details = room.playerDetails?.get(playerId);
+                return {
+                    id: playerId,
+                    name: player?.name || details?.name || '未知',
+                    avatar: player?.avatar || details?.avatar || 'default',
+                    isReady: details?.isReady || false,
+                    isHost: details?.isHost || (playerId === room.hostId),
+                    joinedAt: details?.joinedAt || new Date()
+                };
+            }),
+            settings: {
+                ...room.settings,
+                password: room.settings?.password ? '****' : null
+            },
+            createdAt: room.createdAt,
+            updatedAt: room.updatedAt,
+            isPrivate: room.settings?.isPrivate || false,
+            hasPassword: !!(room.settings?.password)
+        };
+    }
+
+    getPublicRooms() {
+        return Array.from(this.rooms.values())
+            .filter(room => !room.settings?.isPrivate && room.status === 'waiting')
+            .map(room => this.getRoomPublicInfo(room));
+    }
+
+    joinRoom(roomId, player, password = null) {
+        const room = this.rooms.get(roomId);
+        if (!room) {
+            return { success: false, error: 'ROOM_NOT_FOUND', message: '房間不存在' };
+        }
+
+        if (room.players.includes(player.id)) {
+            return { success: false, error: 'ALREADY_IN_ROOM', message: '您已經在這個房間中了' };
+        }
+
+        if (room.players.length >= room.settings.maxPlayers) {
+            return { success: false, error: 'ROOM_FULL', message: '房間已滿' };
+        }
+
+        if (room.settings.password && password !== room.settings.password) {
+            return { success: false, error: 'WRONG_PASSWORD', message: '密碼錯誤' };
+        }
+
+        room.players.push(player.id);
+        room.playerDetails.set(player.id, {
+            id: player.id,
+            name: player.name,
+            avatar: player.avatar || 'default',
+            isReady: false,
+            isHost: false,
+            joinedAt: new Date()
+        });
+        room.updatedAt = new Date().toISOString();
+
+        console.log(`✅ 玩家加入房間: ${player.name} → ${room.name}`);
+        return { success: true, room: this.getRoomPublicInfo(room) };
+    }
+
+    leaveRoom(playerId) {
+        let targetRoom = null;
+        for (const room of this.rooms.values()) {
+            if (room.players.includes(playerId)) {
+                targetRoom = room;
+                break;
+            }
+        }
+
+        if (!targetRoom) {
+            return { success: false, error: 'NOT_IN_ROOM', message: '您不在任何房間中' };
+        }
+
+        targetRoom.players = targetRoom.players.filter(id => id !== playerId);
+        targetRoom.playerDetails.delete(playerId);
+        targetRoom.updatedAt = new Date().toISOString();
+
+        const player = this.players.get(playerId);
+        console.log(`✅ 玩家離開房間: ${player?.name || playerId} ← ${targetRoom.name}`);
+
+        // 如果房間空了，刪除房間
+        if (targetRoom.players.length === 0) {
+            this.rooms.delete(targetRoom.id);
+            console.log(`🗑️ 空房間刪除: ${targetRoom.id}`);
+            return { success: true, room: null };
+        }
+
+        // 如果房主離開，轉移房主權限
+        if (targetRoom.hostId === playerId) {
+            const newHostId = targetRoom.players[0];
+            targetRoom.hostId = newHostId;
+            if (targetRoom.playerDetails.has(newHostId)) {
+                targetRoom.playerDetails.get(newHostId).isHost = true;
+            }
+            console.log(`👑 房主轉移: ${newHostId} 成為新房主`);
+        }
+
+        return { success: true, room: this.getRoomPublicInfo(targetRoom) };
+    }
+
+    findPlayerRoom(playerId) {
+        for (const room of this.rooms.values()) {
+            if (room.players.includes(playerId)) {
+                return room;
+            }
+        }
+        return null;
+    }
+
+    createPlayer(socketId, data) {
+        const player = {
+            id: socketId,
+            name: data.name || `玩家${Math.floor(Math.random() * 1000)}`,
+            avatar: data.avatar || 'default',
+            socketId: socketId,
+            isOnline: true,
+            joinTime: new Date().toISOString()
+        };
+        this.players.set(socketId, player);
+        return player;
+    }
+
+    getPlayer(playerId) {
+        return this.players.get(playerId);
+    }
+
+    removePlayer(playerId) {
+        this.players.delete(playerId);
+    }
+}
+
+const roomManager = new SimpleRoomManager();
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -289,6 +473,31 @@ app.post('/api/cards/simulate', (req, res) => {
     }
 });
 
+// =============== Room Management ===============
+
+/**
+ * GET /api/rooms
+ * Get list of available public rooms
+ */
+app.get('/api/rooms', (req, res) => {
+    try {
+        const rooms = roomManager.getPublicRooms();
+        
+        res.json({
+            success: true,
+            totalRooms: rooms.length,
+            data: rooms
+        });
+        
+    } catch (error) {
+        console.error('Error getting rooms:', error);
+        res.status(500).json({
+            error: 'Failed to get rooms',
+            details: error.message
+        });
+    }
+});
+
 // =============== Analytics ===============
 
 /**
@@ -332,7 +541,8 @@ app.get('*', (req, res) => {
                 'GET /api/cards/:cardId/probability',
                 'GET /api/cards/list',
                 'POST /api/cards/simulate',
-                'GET /api/analytics/system'
+                'GET /api/analytics/system',
+                'GET /api/rooms'
             ]
         });
     }
@@ -352,7 +562,7 @@ app.use((error, req, res, next) => {
 
 // =============== Socket.IO 事件處理 ===============
 
-// 簡單的Socket.IO事件處理（基礎實現）
+// Socket.IO事件處理 - 完整房間管理系統
 io.on('connection', (socket) => {
     console.log(`🔌 Client connected: ${socket.id}`);
     
@@ -361,45 +571,238 @@ io.on('connection', (socket) => {
         socket.emit('pong', { timestamp: data.timestamp });
     });
     
-    // 基本遊戲事件處理（簡化版）
+    // 玩家認證
     socket.on('authenticate', (data) => {
-        const playerId = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        socket.emit('authenticated', {
-            success: true,
-            player: {
-                id: playerId,
-                name: data.name,
-                avatar: data.avatar
-            }
-        });
+        try {
+            const player = roomManager.createPlayer(socket.id, data);
+            console.log(`✅ 玩家認證成功: ${player.name} (${player.id})`);
+            
+            socket.emit('authenticated', {
+                success: true,
+                player: {
+                    id: player.id,
+                    name: player.name,
+                    avatar: player.avatar,
+                    joinTime: player.joinTime
+                }
+            });
+        } catch (error) {
+            console.error('Authentication error:', error);
+            socket.emit('authenticated', {
+                success: false,
+                error: 'AUTHENTICATION_FAILED',
+                message: '認證失敗'
+            });
+        }
     });
     
+    // 創建房間
     socket.on('create_room', (data) => {
-        const roomId = `room_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        socket.join(roomId);
-        socket.emit('room_created', {
-            success: true,
-            room: {
-                id: roomId,
-                name: data.name,
-                maxPlayers: data.maxPlayers || 4,
-                playerCount: 1,
-                status: 'waiting',
-                host: socket.id
+        try {
+            const player = roomManager.getPlayer(socket.id);
+            if (!player) {
+                socket.emit('room_created', {
+                    success: false,
+                    error: 'PLAYER_NOT_FOUND',
+                    message: '請先進行玩家認證'
+                });
+                return;
             }
-        });
+            
+            const result = roomManager.createRoom(player, {
+                name: data.name || `${player.name}的房間`,
+                maxPlayers: data.maxPlayers || 4,
+                isPrivate: data.isPrivate || false,
+                password: data.password || null,
+                startingMoney: data.startingMoney || 1500
+            });
+            
+            if (result.success) {
+                socket.join(result.room.id);
+                socket.emit('room_created', {
+                    success: true,
+                    room: result.room
+                });
+                
+                // 廣播房間列表更新
+                io.emit('rooms_updated', {
+                    rooms: roomManager.getPublicRooms()
+                });
+                
+                console.log(`✅ 房間創建成功: ${result.room.name} (${result.room.id})`);
+            } else {
+                socket.emit('room_created', result);
+            }
+        } catch (error) {
+            console.error('Create room error:', error);
+            socket.emit('room_created', {
+                success: false,
+                error: 'ROOM_CREATION_FAILED',
+                message: '房間創建失敗'
+            });
+        }
     });
     
+    // 獲取房間列表
     socket.on('get_rooms', () => {
-        // 返回空房間列表（簡化實現）
-        socket.emit('rooms_list', {
-            success: true,
-            rooms: []
-        });
+        try {
+            const rooms = roomManager.getPublicRooms();
+            socket.emit('rooms_list', {
+                success: true,
+                rooms: rooms
+            });
+            console.log(`📋 房間列表請求: 返回 ${rooms.length} 個房間`);
+        } catch (error) {
+            console.error('Get rooms error:', error);
+            socket.emit('rooms_list', {
+                success: false,
+                error: 'ROOMS_FETCH_FAILED',
+                message: '獲取房間列表失敗',
+                rooms: []
+            });
+        }
     });
     
+    // 加入房間
+    socket.on('join_room', (data) => {
+        try {
+            const { roomId, password } = data;
+            const player = roomManager.getPlayer(socket.id);
+            
+            if (!player) {
+                socket.emit('room_joined', {
+                    success: false,
+                    error: 'PLAYER_NOT_FOUND',
+                    message: '請先進行玩家認證'
+                });
+                return;
+            }
+            
+            const result = roomManager.joinRoom(roomId, player, password);
+            
+            if (result.success) {
+                socket.join(roomId);
+                socket.emit('room_joined', {
+                    success: true,
+                    room: result.room
+                });
+                
+                // 通知房間內其他玩家
+                socket.to(roomId).emit('player_joined', {
+                    player: {
+                        id: player.id,
+                        name: player.name,
+                        avatar: player.avatar
+                    },
+                    room: result.room
+                });
+                
+                // 廣播房間列表更新
+                io.emit('rooms_updated', {
+                    rooms: roomManager.getPublicRooms()
+                });
+                
+                console.log(`✅ 玩家加入房間: ${player.name} → ${result.room.name}`);
+            } else {
+                socket.emit('room_joined', result);
+            }
+        } catch (error) {
+            console.error('Join room error:', error);
+            socket.emit('room_joined', {
+                success: false,
+                error: 'ROOM_JOIN_FAILED',
+                message: '加入房間失敗'
+            });
+        }
+    });
+    
+    // 離開房間
+    socket.on('leave_room', () => {
+        try {
+            const player = roomManager.getPlayer(socket.id);
+            if (!player) return;
+            
+            const currentRoom = roomManager.findPlayerRoom(socket.id);
+            if (!currentRoom) {
+                socket.emit('room_left', {
+                    success: false,
+                    error: 'NOT_IN_ROOM',
+                    message: '您不在任何房間中'
+                });
+                return;
+            }
+            
+            const result = roomManager.leaveRoom(socket.id);
+            
+            if (result.success) {
+                socket.leave(currentRoom.id);
+                socket.emit('room_left', {
+                    success: true,
+                    room: result.room
+                });
+                
+                // 通知房間內其他玩家
+                socket.to(currentRoom.id).emit('player_left', {
+                    player: {
+                        id: player.id,
+                        name: player.name
+                    },
+                    room: result.room
+                });
+                
+                // 廣播房間列表更新
+                io.emit('rooms_updated', {
+                    rooms: roomManager.getPublicRooms()
+                });
+                
+                console.log(`✅ 玩家離開房間: ${player.name} ← ${currentRoom.name}`);
+            } else {
+                socket.emit('room_left', result);
+            }
+        } catch (error) {
+            console.error('Leave room error:', error);
+            socket.emit('room_left', {
+                success: false,
+                error: 'ROOM_LEAVE_FAILED',
+                message: '離開房間失敗'
+            });
+        }
+    });
+    
+    // 玩家斷線處理
     socket.on('disconnect', (reason) => {
         console.log(`❌ Client disconnected: ${socket.id}, reason: ${reason}`);
+        
+        try {
+            const player = roomManager.getPlayer(socket.id);
+            if (player) {
+                const currentRoom = roomManager.findPlayerRoom(socket.id);
+                if (currentRoom) {
+                    const result = roomManager.leaveRoom(socket.id);
+                    if (result.success) {
+                        // 通知房間內其他玩家
+                        socket.to(currentRoom.id).emit('player_left', {
+                            player: {
+                                id: player.id,
+                                name: player.name
+                            },
+                            room: result.room,
+                            reason: 'disconnected'
+                        });
+                        
+                        // 廣播房間列表更新
+                        io.emit('rooms_updated', {
+                            rooms: roomManager.getPublicRooms()
+                        });
+                    }
+                }
+                
+                roomManager.removePlayer(socket.id);
+                console.log(`🗑️ 玩家數據清理: ${player.name}`);
+            }
+        } catch (error) {
+            console.error('Disconnect cleanup error:', error);
+        }
     });
 });
 
@@ -422,6 +825,7 @@ server.listen(PORT, () => {
     console.log('  GET     /api/cards/:id/probability - Analyze card');
     console.log('  GET     /api/cards/list        - List all cards');
     console.log('  POST    /api/cards/simulate    - Simulate probabilities');
+    console.log('  GET     /api/rooms             - Get available rooms');
     console.log('  GET     /api/analytics/system  - System stats');
     console.log();
 });
