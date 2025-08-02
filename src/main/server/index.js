@@ -7,11 +7,23 @@
 
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const http = require('http');
+const socketIo = require('socket.io');
 const GameService = require('./services/game-service');
 
-// Initialize Express app
+// Initialize Express app and HTTP server
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
+
+// Initialize Socket.IO
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
 // Initialize services
 const gameService = new GameService();
@@ -19,6 +31,9 @@ const gameService = new GameService();
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// 靜態文件服務 - 提供前端HTML頁面
+app.use(express.static(path.join(__dirname, '../../../public')));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -29,8 +44,13 @@ app.use((req, res, next) => {
 
 // =============== API Routes ===============
 
-// Health check endpoint
+// 前端應用路由 - 主頁面
 app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../../../public/index.html'));
+});
+
+// API服務信息端點
+app.get('/api', (req, res) => {
     res.json({
         service: 'RichMan FFT Card Probability API',
         status: 'running',
@@ -295,24 +315,30 @@ app.get('/api/analytics/system', (req, res) => {
 
 // =============== Error Handling ===============
 
-// 404 handler
-app.use((req, res) => {
-    res.status(404).json({
-        error: 'Endpoint not found',
-        path: req.path,
-        method: req.method,
-        availableEndpoints: [
-            'GET /',
-            'GET /health',
-            'POST /api/game/start',
-            'GET /api/game/:gameId/state',
-            'POST /api/game/:gameId/roll',
-            'GET /api/cards/:cardId/probability',
-            'GET /api/cards/list',
-            'POST /api/cards/simulate',
-            'GET /api/analytics/system'
-        ]
-    });
+// SPA路由處理 - 所有非API路由都返回index.html
+app.get('*', (req, res) => {
+    // 如果是API請求，返回404 JSON
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({
+            error: 'API endpoint not found',
+            path: req.path,
+            method: req.method,
+            availableEndpoints: [
+                'GET /api',
+                'GET /health',
+                'POST /api/game/start',
+                'GET /api/game/:gameId/state',
+                'POST /api/game/:gameId/roll',
+                'GET /api/cards/:cardId/probability',
+                'GET /api/cards/list',
+                'POST /api/cards/simulate',
+                'GET /api/analytics/system'
+            ]
+        });
+    }
+    
+    // 所有其他路由都返回前端HTML頁面
+    res.sendFile(path.join(__dirname, '../../../public/index.html'));
 });
 
 // Global error handler
@@ -324,9 +350,62 @@ app.use((error, req, res, next) => {
     });
 });
 
+// =============== Socket.IO 事件處理 ===============
+
+// 簡單的Socket.IO事件處理（基礎實現）
+io.on('connection', (socket) => {
+    console.log(`🔌 Client connected: ${socket.id}`);
+    
+    // Ping-Pong測試
+    socket.on('ping', (data) => {
+        socket.emit('pong', { timestamp: data.timestamp });
+    });
+    
+    // 基本遊戲事件處理（簡化版）
+    socket.on('authenticate', (data) => {
+        const playerId = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        socket.emit('authenticated', {
+            success: true,
+            player: {
+                id: playerId,
+                name: data.name,
+                avatar: data.avatar
+            }
+        });
+    });
+    
+    socket.on('create_room', (data) => {
+        const roomId = `room_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        socket.join(roomId);
+        socket.emit('room_created', {
+            success: true,
+            room: {
+                id: roomId,
+                name: data.name,
+                maxPlayers: data.maxPlayers || 4,
+                playerCount: 1,
+                status: 'waiting',
+                host: socket.id
+            }
+        });
+    });
+    
+    socket.on('get_rooms', () => {
+        // 返回空房間列表（簡化實現）
+        socket.emit('rooms_list', {
+            success: true,
+            rooms: []
+        });
+    });
+    
+    socket.on('disconnect', (reason) => {
+        console.log(`❌ Client disconnected: ${socket.id}, reason: ${reason}`);
+    });
+});
+
 // =============== Server Start ===============
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log('🚀 RichMan FFT Card Probability API Server');
     console.log(`📡 Server running on port ${PORT}`);
     console.log(`🔬 FFT Engine initialized`);
