@@ -716,6 +716,126 @@ io.on('connection', (socket) => {
         }
     });
     
+    // 開始遊戲
+    socket.on('start_game', (data) => {
+        try {
+            const { roomId } = data;
+            const player = roomManager.getPlayer(socket.id);
+            
+            if (!player) {
+                socket.emit('game_start_error', {
+                    success: false,
+                    error: 'PLAYER_NOT_FOUND',
+                    message: '請先進行玩家認證'
+                });
+                return;
+            }
+            
+            // 查找房間
+            let targetRoom = null;
+            for (const room of roomManager.rooms.values()) {
+                if (room.id === roomId) {
+                    targetRoom = room;
+                    break;
+                }
+            }
+            
+            if (!targetRoom) {
+                socket.emit('game_start_error', {
+                    success: false,
+                    error: 'ROOM_NOT_FOUND',
+                    message: '房間不存在'
+                });
+                return;
+            }
+            
+            // 檢查是否為房主
+            if (targetRoom.hostId !== player.id) {
+                socket.emit('game_start_error', {
+                    success: false,
+                    error: 'NOT_HOST',
+                    message: '只有房主可以開始遊戲'
+                });
+                return;
+            }
+            
+            // 檢查玩家數量
+            if (targetRoom.players.length < 2) {
+                socket.emit('game_start_error', {
+                    success: false,
+                    error: 'INSUFFICIENT_PLAYERS',
+                    message: '至少需要2名玩家才能開始遊戲'
+                });
+                return;
+            }
+            
+            // 更新房間狀態
+            targetRoom.status = 'in_game';
+            targetRoom.gameStartTime = new Date().toISOString();
+            targetRoom.updatedAt = new Date().toISOString();
+            
+            // 創建遊戲狀態
+            const gameState = {
+                gameId: `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                roomId: targetRoom.id,
+                players: targetRoom.players.map((playerId, index) => {
+                    const playerData = roomManager.getPlayer(playerId);
+                    const details = targetRoom.playerDetails.get(playerId);
+                    return {
+                        id: playerId,
+                        name: playerData?.name || details?.name || '未知玩家',
+                        avatar: playerData?.avatar || details?.avatar || 'default',
+                        position: 0,
+                        money: 1500,
+                        properties: [],
+                        isActive: true,
+                        turnOrder: index
+                    };
+                }),
+                currentPlayerIndex: 0,
+                gamePhase: 'starting',
+                roundNumber: 1,
+                startTime: new Date().toISOString()
+            };
+            
+            // 發送遊戲開始事件給房間內所有玩家
+            io.to(roomId).emit('game_started', {
+                success: true,
+                gameState: gameState,
+                message: '遊戲開始！',
+                room: roomManager.getRoomPublicInfo(targetRoom)
+            });
+            
+            // 更新房間列表
+            io.emit('rooms_updated', {
+                rooms: roomManager.getPublicRooms()
+            });
+            
+            console.log(`🎮 遊戲開始: ${targetRoom.name} (${roomId}) 由 ${player.name} 啟動`);
+            console.log(`👥 玩家列表: ${gameState.players.map(p => p.name).join(', ')}`);
+            
+            // 1秒後開始第一個玩家的回合
+            setTimeout(() => {
+                const firstPlayer = gameState.players[0];
+                io.to(roomId).emit('turn_started', {
+                    playerId: firstPlayer.id,
+                    playerName: firstPlayer.name,
+                    roundNumber: 1,
+                    turnTimeLimit: 120000 // 2分鐘
+                });
+                console.log(`🎯 開始回合: ${firstPlayer.name} (${firstPlayer.id})`);
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Start game error:', error);
+            socket.emit('game_start_error', {
+                success: false,
+                error: 'GAME_START_FAILED',
+                message: '開始遊戲失敗'
+            });
+        }
+    });
+    
     // 離開房間
     socket.on('leave_room', () => {
         try {

@@ -1225,6 +1225,11 @@
                 }
             });
             
+            socket.on('game_start_error', (data) => {
+                addLog(`❌ 開始遊戲失敗: ${data.message}`, 'error');
+                console.error('Game start error:', data);
+            });
+            
             socket.on('turn_started', (data) => {
                 if (data.playerId === currentPlayerId) {
                     addLog(`🎯 輪到你了！回合 ${data.roundNumber}`, 'game');
