@@ -85,10 +85,11 @@ const SidePanel = styled.div`
   background: ${props => props.theme.background.secondary};
   border-radius: 12px;
   padding: 20px;
-  height: fit-content;
-  max-height: calc(100vh - 140px);
+  height: calc(100vh - 140px);
   overflow-y: auto;
   border: 1px solid ${props => props.theme.border.primary};
+  display: flex;
+  flex-direction: column;
 `;
 
 const MainGameArea = styled.div`
@@ -465,41 +466,61 @@ function FFTGamePage() {
 
         {/* Right Panel - Game History */}
         <SidePanel theme={theme}>
-          <RollHistory>
-            <h4>Roll History ({gameHistory.length})</h4>
-            {gameHistory.length === 0 ? (
-              <p style={{ color: theme.text.secondary, fontStyle: 'italic' }}>
-                No rolls yet
-              </p>
-            ) : (
-              gameHistory.slice(-10).reverse().map((roll, index) => (
-                <HistoryItem key={index} theme={theme}>
-                  <div className="turn">Turn {roll.turn}</div>
-                  <div className="result">
-                    Dice: {roll.diceResult} → {roll.card?.name || 'Unknown'}
-                  </div>
-                </HistoryItem>
-              ))
-            )}
-          </RollHistory>
-
-          {/* Position Assignments */}
-          {currentGame?.positionAssignments && (
-            <div style={{ marginTop: '30px' }}>
-              <h4>Position Assignments</h4>
-              {Object.entries(currentGame.positionAssignments).map(([position, cardId]) => (
-                <div key={position} style={{ 
-                  padding: '8px', 
-                  background: theme.background.card,
-                  borderRadius: '4px',
-                  margin: '4px 0',
-                  fontSize: '0.9rem'
+          <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <RollHistory style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <h4 style={{ flexShrink: 0, marginBottom: '15px' }}>Roll History ({gameHistory.length})</h4>
+              {gameHistory.length === 0 ? (
+                <p style={{ color: theme.text.secondary, fontStyle: 'italic' }}>
+                  No rolls yet
+                </p>
+              ) : (
+                <div style={{ 
+                  flex: '1 1 auto', 
+                  overflowY: 'auto',
+                  minHeight: 0,
+                  maxHeight: 'none'
                 }}>
-                  <strong>Pos {position}:</strong> {cardId}
+                  {gameHistory.slice(-10).reverse().map((roll, index) => (
+                    <HistoryItem key={index} theme={theme}>
+                      <div className="turn">Turn {roll.turn}</div>
+                      <div className="result">
+                        Dice: {roll.diceResult} → {roll.card?.name || 'Unknown'}
+                      </div>
+                    </HistoryItem>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
+            </RollHistory>
+
+            {/* Position Assignments */}
+            {currentGame?.positionAssignments && (
+              <div style={{ 
+                flexShrink: 0, 
+                marginTop: '20px',
+                maxHeight: '30%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
+                <h4 style={{ marginBottom: '10px' }}>Position Assignments</h4>
+                <div style={{ 
+                  overflowY: 'auto',
+                  flex: '1 1 auto'
+                }}>
+                  {Object.entries(currentGame.positionAssignments).map(([position, cardId]) => (
+                    <div key={position} style={{ 
+                      padding: '8px', 
+                      background: theme.background.card,
+                      borderRadius: '4px',
+                      margin: '4px 0',
+                      fontSize: '0.9rem'
+                    }}>
+                      <strong>Pos {position}:</strong> {cardId}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </SidePanel>
       </GameContent>
     </GameContainer>
